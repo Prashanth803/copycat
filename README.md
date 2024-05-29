@@ -1,8 +1,3 @@
-Your code contains multiple syntax errors and formatting issues. I'll help you correct these issues step by step, ensuring your code is clean, readable, and functional. 
-
-Here's the corrected version of your script:
-
-```python
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from datetime import datetime, timedelta
@@ -66,23 +61,23 @@ def calculate_obv_strategy(df, obv_ma_period=20):
 
 # Function to update the plot
 def update_plot(frame):
-    global df
+    global df, times
     current_time = datetime.now().strftime('%H:%M:%S')
     final = df['close'].iloc[-1]
     new_stock_data = generate_stock_data('AAPL', final, num_minutes=1)
-    new_stock_data = pd.DataFrame(new_stock_data)[['close', 'volume']]
-    
+    new_stock_data = pd.DataFrame(new_stock_data)[['timestamp', 'close', 'volume']].set_index('timestamp')
+
     df = pd.concat([df, new_stock_data])
     df = calculate_obv(df)
     df = calculate_obv_strategy(df)
     
-    obv = df['OBV'].to_numpy()
-    times.append(current_time)
+    if len(times) >= 60:
+        times = times[-59:] + [current_time]
+    else:
+        times.append(current_time)
     
-    if len(times) > 60:
-        times.pop(0)
-        obv = obv[-60:]
-    
+    obv = df['OBV'][-60:].to_numpy()
+
     ax.clear()
     ax.plot(times, obv, label='OBV')
     ax.set_xticklabels(times, rotation=45, ha='right')
@@ -102,8 +97,7 @@ def update_plot(frame):
 
 # Initial data generation
 stocks = generate_stock_data("AAPL", 200)
-df = pd.DataFrame(stocks)
-df.set_index('timestamp', inplace=True)
+df = pd.DataFrame(stocks).set_index('timestamp')
 df = calculate_obv(df)
 df = calculate_obv_strategy(df)
 
@@ -112,17 +106,6 @@ fig, ax = plt.subplots()
 times = list(df.index.strftime('%H:%M:%S'))
 
 # Animation setup
-ani = FuncAnimation(fig, update_plot, interval=1000)
+ani = FuncAnimation(fig, update_plot, interval=1000, cache_frame_data=False)
 
 plt.show()
-```
-
-### Key Corrections:
-
-1. **Proper Imports and Spelling**: Corrected imports and spelling errors (`natplotlib` to `matplotlib`, `Inport` to `import`, etc.).
-2. **Consistent Naming**: Ensured that variable and function names are consistent and correctly spelled.
-3. **Function Definitions**: Corrected indentation and ensured that function definitions are properly formatted.
-4. **Data Handling**: Corrected how data is appended and updated in the DataFrame.
-5. **Plot Annotations**: Fixed the logic for adding buy and sell annotations on the plot.
-
-This script should now run correctly, generating simulated stock data, calculating the OBV and OBV strategy, and updating the plot in real-time.
