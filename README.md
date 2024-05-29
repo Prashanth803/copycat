@@ -1,8 +1,5 @@
-The error you're encountering, `ValueError: x and y must have same first dimension, but have shapes (43200,) and (66,)`, indicates a mismatch between the lengths of the `times` array and the `obv` array. This can happen because the `times` list is appended in each update, but the `obv` array is taken directly from the DataFrame and doesn't match the truncated `times` list.
+OBV:
 
-To fix this, ensure that both `times` and `obv` are kept in sync. Here’s an updated and corrected version of your code:
-
-```python
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from datetime import datetime, timedelta
@@ -52,7 +49,7 @@ def calculate_obv(df):
 
 # Function to calculate OBV strategy
 def calculate_obv_strategy(df, obv_ma_period=20):
-    avg = df['OBV'].rolling(window=obv_ma_period).mean()
+    avg = df['OBV'].ewm(span=20).mean()
     df['Buy_signal'] = np.nan
     df['Sell_signal'] = np.nan
 
@@ -114,12 +111,3 @@ times = list(df.index.strftime('%H:%M:%S'))
 ani = FuncAnimation(fig, update_plot, interval=1000, cache_frame_data=False)
 
 plt.show()
-```
-
-### Key Corrections:
-
-1. **Ensure `times` and `obv` Sync**: Adjust `times` to ensure it has the same length as `obv` by slicing the last 60 elements.
-2. **Proper Data Handling**: Convert new stock data to DataFrame and set the `timestamp` index before concatenating with `df`.
-3. **Animation Parameters**: Added `cache_frame_data=False` to suppress caching warnings.
-
-This should resolve the mismatch error and ensure that your real-time plot updates correctly.
