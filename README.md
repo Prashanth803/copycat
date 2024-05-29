@@ -133,3 +133,60 @@ plt.show()
    - `plt.show()`: Displays the plot in a window.
 
 This script demonstrates the core functionality of `matplotlib` for creating dynamic plots with real-time data updates.# copycat
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as Tk
+from datetime import datetime, timedelta
+import random
+import pandas as pd
+
+# Initialize lists to store time and RSI values
+times = []
+rsi_values = []
+
+# Function to generate random RSI data
+def generate_random_data():
+    current_time = datetime.now().strftime('%H:%M:%S')
+    rsi_value = random.uniform(0, 100)
+    return current_time, rsi_value
+
+# Function to update the plot
+def update_plot(frame):
+    current_time, rsi_value = generate_random_data()
+    times.append(current_time)
+    rsi_values.append(rsi_value)
+
+    # Update plot limits to create a scrolling effect
+    if len(times) > 20:
+        ax.set_xlim(len(times) - 20, len(times))
+
+    ax.clear()
+    ax.plot(range(len(times)), rsi_values, label='RSI')
+    ax.set_xticks(range(len(times)))
+    ax.set_xticklabels(times, rotation=45, ha='right')
+    ax.set_title('Real-Time RSI Plot')
+    ax.set_ylabel('RSI')
+    ax.set_xlabel('Time')
+    ax.legend()
+    fig.autofmt_xdate()
+
+# Setup the main Tkinter window
+root = Tk.Tk()
+root.title("Real-Time RSI Plot")
+
+fig, ax = plt.subplots()
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+
+# Set up the animation
+ani = animation.FuncAnimation(fig, update_plot, interval=3000)  # 3000 ms = 3 seconds
+
+def _quit():
+    root.quit()
+    root.destroy()
+
+button = Tk.Button(master=root, text="Quit", command=_quit)
+button.pack(side=Tk.BOTTOM)
+
+Tk.mainloop()
