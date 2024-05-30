@@ -127,3 +127,51 @@ for i in range(len(stocks)):
     if stocks['signal'][i] == 1 or stocks['signal'][i] == -1:
         execute_trade(stocks['signal'][i], STOCK_SYMBOL)
         time.sleep(1)  # To avoid hitting the rate limit
+
+
+# Setup initial variables
+short_period = 12  # 12 intervals of 5 minutes each (60 minutes)
+long_period = 26   # 26 intervals of 5 minutes each (130 minutes)
+
+# Create the figure and axes
+fig, ax = plt.subplots()
+
+# Function to update the plot
+def update(frame):
+    global stocks, API_KEY, STOCK_SYMBOL, INTERVAL
+    data = fetch_data(STOCK_SYMBOL, INTERVAL, API_KEY)
+    stocks = parse_data(data)
+    prices = stocks['close'].to_numpy()
+
+    # Calculate EMAs and generate signals
+    short_ema, long_ema, signals = generate_signals(prices, short_period, long_period)
+
+    # Clear the previous plot
+    ax.clear()
+
+    # Plot the closing prices
+    ax.plot(stocks.index, stocks['close'], label='Close Price', color='blue')
+
+    # Plot the EMAs
+    ax.plot(stocks.index[len(stocks) - len(short_ema):], short_ema, label=f'Short EMA ({short_period})', color='green')
+    ax.plot(stocks.index[len(stocks) - len(long_ema):], long_ema, label=f'Long EMA ({long_period})', color='red')
+
+    # Plot buy/sell signals
+    for i, signal in enumerate(signals):
+        if signal == 1:
+            ax.plot(stocks.index[len(stocks) - len(signals) + i], prices[len(prices) - len(signals) + i], marker='^', color='green', markersize=10, label='Buy Signal' if i == 0 else "")
+        elif signal == -1:
+            ax.plot(stocks.index[len(stocks) - len(signals) + i], prices[len(prices) - len(signals) + i], marker='v', color='red', markersize=10, label='Sell Signal' if i == 0 else "")
+
+    # Set titles and labels
+    ax.set_title('Stock Price and EMA Buy/Sell Signals')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Price')
+    ax.legend()
+
+# Create the animation
+ani = animation.FuncAnimation(fig, update, interval=300000)  # Update every 5 minutes (300000 ms)
+
+# Display the plot
+plt.show()
+
