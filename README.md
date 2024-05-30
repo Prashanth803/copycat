@@ -1,3 +1,67 @@
+// server.js
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const Datastore = require('nedb');
+
+const app = express();
+const port = 3000;
+
+app.use(bodyParser.json());
+
+const db = new Datastore({ filename: 'database.db', autoload: true });
+
+// Create a new document
+app.post('/api/documents', (req, res) => {
+    const doc = req.body;
+    db.insert(doc, (err, newDoc) => {
+        if (err) {
+            res.status(500).send(err);
+        } else {
+            res.status(201).send(newDoc);
+        }
+    });
+});
+
+// Read all documents
+app.get('/api/documents', (req, res) => {
+    db.find({}, (err, docs) => {
+        if (err) {
+            res.status(500).send(err);
+        } else {
+            res.status(200).send(docs);
+        }
+    });
+});
+
+// Update a document by ID
+app.put('/api/documents/:id', (req, res) => {
+    const { id } = req.params;
+    const updatedDoc = req.body;
+    db.update({ _id: id }, { $set: updatedDoc }, {}, (err, numReplaced) => {
+        if (err) {
+            res.status(500).send(err);
+        } else {
+            res.status(200).send({ updated: numReplaced });
+        }
+    });
+});
+
+// Delete a document by ID
+app.delete('/api/documents/:id', (req, res) => {
+    const { id } = req.params;
+    db.remove({ _id: id }, {}, (err, numRemoved) => {
+        if (err) {
+            res.status(500).send(err);
+        } else {
+            res.status(200).send({ removed: numRemoved });
+        }
+    });
+});
+
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}/`);
+});
 OBV:
 
 import matplotlib.pyplot as plt
