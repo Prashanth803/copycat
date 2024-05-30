@@ -1,4 +1,68 @@
-// server.js
+
+import requests
+import json
+
+# Define the base URL of your API
+base_url = 'http://localhost:3000/api'
+
+# Function to create a new document
+def create_document(data):
+    url = f"{base_url}/documents"
+    response = requests.post(url, json=data)
+    if response.status_code == 201:
+        print("Document created successfully:", response.json())
+    else:
+        print("Failed to create document:", response.text)
+
+# Function to read documents
+def read_documents():
+    url = f"{base_url}/documents"
+    response = requests.get(url)
+    if response.status_code == 200:
+        print("Documents retrieved successfully:", response.json())
+    else:
+        print("Failed to retrieve documents:", response.text)
+
+# Function to update a document by ID
+def update_document(document_id, data):
+    url = f"{base_url}/documents/{document_id}"
+    response = requests.put(url, json=data)
+    if response.status_code == 200:
+        print("Document updated successfully:", response.json())
+    else:
+        print("Failed to update document:", response.text)
+
+# Function to delete a document by ID
+def delete_document(document_id):
+    url = f"{base_url}/documents/{document_id}"
+    response = requests.delete(url)
+    if response.status_code == 200:
+        print("Document deleted successfully:", response.json())
+    else:
+        print("Failed to delete document:", response.text)
+
+# Example usage
+if __name__ == "__main__":
+    # Create a new document
+    new_data = {
+        "name": "John Doe",
+        "email": "john.doe@example.com"
+    }
+    create_document(new_data)
+
+    # Read documents
+    read_documents()
+
+    # Update a document
+    update_data = {
+        "name": "Jane Doe"
+    }
+    document_id = 'some_document_id'  # Replace with actual document ID
+    update_document(document_id, update_data)
+
+    # Delete a document
+    delete_document(document_id)
+    // server.js
 
 const express = require('express');
 const bodyParser = require('body-parser');
