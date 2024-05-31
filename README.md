@@ -1,136 +1,149 @@
-To implement a microservice architecture where you receive data from a server and pass it to different indicator classes without requiring traditional API routes, you can use an event-driven approach. This can be achieved using a message broker to facilitate communication between services. 
+Yes, you can use microservices to handle different trading indicators. Each indicator can run as a separate microservice, receiving data, processing it, and then returning the results. Here’s a general approach to achieve this using microservices:
 
-Here is a step-by-step guide to implementing this:
+1. **Define Microservices for Each Indicator:**
+   - Each indicator runs as an independent service.
+   - The main server sends data to each microservice.
+   - Each microservice processes the data and returns the result.
 
-### 1. Set Up the Environment
+2. **Set Up Communication:**
+   - Use a lightweight communication protocol like HTTP or gRPC for communication between the main server and microservices.
 
-1. **Install RabbitMQ**: Ensure RabbitMQ is installed and running.
-2. **Install Necessary Libraries**: Use `pika` for RabbitMQ and any other libraries you need for your indicator classes.
+3. **Collect and Aggregate Results:**
+   - The main server collects results from all microservices and aggregates them before sending back to the client.
 
-```bash
-pip install pika
-```
+### Example Implementation Using Flask for Microservices
 
-### 2. Define Your Indicator Classes
+#### Step 1: Define Microservices for Each Indicator
 
-Let's assume you have several indicator classes that process data and return some results. Each class should have a method that takes data as input and returns some processed result.
+**IndicatorA Microservice:**
 
 ```python
-class IndicatorA:
-    def process(self, data):
-        # Process the data
-        return f"IndicatorA processed {data}"
+from flask import Flask, request, jsonify
 
-class IndicatorB:
-    def process(self, data):
-        # Process the data
-        return f"IndicatorB processed {data}"
+app = Flask(__name__)
+
+@app.route('/process', methods=['POST'])
+def process():
+    data = request.json['data']
+    result = f"IndicatorA processed {data}"
+    return jsonify(result=result)
+
+if __name__ == '__main__':
+    app.run(port=5001)
 ```
 
-### 3. Microservice to Receive Data and Distribute
+**IndicatorB Microservice:**
 
-This microservice will receive data from the server and publish it to a RabbitMQ queue.
+```python
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/process', methods=['POST'])
+def process():
+    data = request.json['data']
+    result = f"IndicatorB processed {data}"
+    return jsonify(result=result)
+
+if __name__ == '__main__':
+    app.run(port=5002)
+```
+
+#### Step 2: Create the Main Server
+
+**Main Server:**
 
 ```python
 import socket
-import pika
+import threading
+import requests
+import json
 
-def start_socket_client():
-    host = 'your_server_ip'  # Server IP address
-    port = 12345  # Server port
+# Server settings
+HOST = '127.0.0.1'  # Localhost
+PORT = 65432        # Arbitrary non-privileged port
 
-    # Create a socket object
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((host, port))
+# URLs of the microservices
+microservice_urls = [
+    'http://127.0.0.1:5001/process',
+    'http://127.0.0.1:5002/process'
+]
 
+def handle_client(conn, addr):
+    print(f'New connection from {addr}')
     while True:
-        data = s.recv(1024)
-        if not data:
+        try:
+            data = conn.recv(1024)
+            if not data:
+                break
+            data = data.decode()
+            print(f'Received data from {addr}: {data}')
+
+            # Send data to each microservice and collect responses
+            responses = []
+            for url in microservice_urls:
+                response = requests.post(url, json={'data': data})
+                responses.append(response.json()['result'])
+
+            # Combine the responses into a single message
+            combined_response = "\n".join(responses)
+            
+            # Send the combined response back to the client
+            conn.sendall(combined_response.encode())
+        
+        except ConnectionResetError:
             break
-        print(f"Received: {data.decode('utf-8')}")
-        distribute_data(data)
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    conn.close()
+    print(f'Connection from {addr} closed.')
 
-    s.close()
+def main():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen()
+        print(f'Server listening on {HOST}:{PORT}')
+        
+        while True:
+            conn, addr = server_socket.accept()
+            client_thread = threading.Thread(target=handle_client, args=(conn, addr))
+            client_thread.start()
 
-def distribute_data(data):
-    try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-        channel = connection.channel()
-        channel.queue_declare(queue='data_queue')
-        channel.basic_publish(exchange='', routing_key='data_queue', body=data)
-        print(f"Data sent to queue: {data.decode('utf-8')}")
-    except pika.exceptions.AMQPError as err:
-        print(f"Error occurred: {err}")
-    finally:
-        if 'connection' in locals() and connection.is_open:
-            connection.close()
-
-if __name__ == "__main__":
-    start_socket_client()
+if __name__ == '__main__':
+    main()
 ```
 
-### 4. Microservices to Process Data
+### Explanation
 
-Each microservice will consume data from the RabbitMQ queue, process it using the indicator classes, and potentially return the result to another queue or directly back to the client if needed.
+1. **Microservices Setup:**
+   - Each indicator is implemented as a separate microservice using Flask.
+   - Each microservice listens on a different port (`5001` for `IndicatorA` and `5002` for `IndicatorB`).
 
-**Microservice for IndicatorA:**
+2. **Main Server Setup:**
+   - The main server listens on a specified host and port (`HOST` and `PORT`).
+   - When data is received from a client, it sends the data to each microservice using HTTP POST requests.
+   - It collects the responses from all microservices, combines them, and sends the combined response back to the client.
 
-```python
-import pika
+3. **Communication:**
+   - HTTP is used for communication between the main server and the microservices.
+   - The main server sends data to microservices as JSON and expects JSON responses.
 
-class IndicatorA:
-    def process(self, data):
-        return f"IndicatorA processed {data}"
+### Running the Setup
 
-def callback(ch, method, properties, body):
-    data = body.decode('utf-8')
-    indicator = IndicatorA()
-    result = indicator.process(data)
-    print(f"Processed result: {result}")
+1. **Run each microservice** in separate terminals:
+   ```sh
+   python indicator_a_service.py
+   python indicator_b_service.py
+   ```
 
-def start_consumer():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    channel.queue_declare(queue='data_queue')
-    channel.basic_consume(queue='data_queue', on_message_callback=callback, auto_ack=True)
-    print('Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
+2. **Run the main server:**
+   ```sh
+   python main_server.py
+   ```
 
-if __name__ == "__main__":
-    start_consumer()
-```
+3. **Test the setup:**
+   - Use a client script or a tool like `telnet` or `nc` (netcat) to send data to the main server.
+   - Observe the combined responses from the microservices.
 
-**Microservice for IndicatorB:**
-
-```python
-import pika
-
-class IndicatorB:
-    def process(self, data):
-        return f"IndicatorB processed {data}"
-
-def callback(ch, method, properties, body):
-    data = body.decode('utf-8')
-    indicator = IndicatorB()
-    result = indicator.process(data)
-    print(f"Processed result: {result}")
-
-def start_consumer():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    channel.queue_declare(queue='data_queue')
-    channel.basic_consume(queue='data_queue', on_message_callback=callback, auto_ack=True)
-    print('Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
-
-if __name__ == "__main__":
-    start_consumer()
-```
-
-### Summary
-
-1. **Socket Client**: Connects to the server and receives data, then sends it to a RabbitMQ queue.
-2. **Message Broker (RabbitMQ)**: Facilitates communication between the data-receiving service and the indicator processing services.
-3. **Indicator Microservices**: Each microservice listens to the RabbitMQ queue, processes the data using its indicator class, and outputs the result.
-
-This setup ensures a decoupled, scalable, and event-driven architecture, where each microservice can independently process incoming data without requiring direct API routes.
+This setup allows you to use microservices for each trading indicator, achieving a modular and scalable architecture.
