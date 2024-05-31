@@ -1,9 +1,14 @@
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from datetime import datetime, timedelta
 import pandas as pd
 import random
 import numpy as np
+import schedule
+import os
+
+def append_to_csv(df, file_path):
+    mode = 'w' if not os.path.isfile(file_path) else 'a'
+    df.to_csv(file_path, mode=mode, header=mode=='w', index=False)
+    print("Data appended successfully to", file_path)
 
 # Function to generate simulated stock data
 def generate_stock_data(symbol, start_price, num_minutes=30*24*60):
@@ -33,7 +38,6 @@ def generate_stock_data(symbol, start_price, num_minutes=30*24*60):
 # Function to calculate OBV
 def calculate_obv(df):
     obv = [0]
-
     for i in range(1, len(df)):
         if df['close'].iloc[i] > df['close'].iloc[i-1]:
             obv.append(obv[-1] + df['volume'].iloc[i])
@@ -45,7 +49,6 @@ def calculate_obv(df):
     df['OBV'] = pd.Series(obv, index=df.index)
     return df
 
-# Function to calculate OBV strategy
 def calculate_obv_strategy(df, obv_ma_period=20):
     avg = df['OBV'].ewm(span=20).mean()
     df['Buy_signal'] = np.nan
@@ -53,59 +56,38 @@ def calculate_obv_strategy(df, obv_ma_period=20):
 
     for i in range(1, len(df)):
         if df['OBV'].iloc[i] > avg.iloc[i] and df['OBV'].iloc[i-1] <= avg.iloc[i-1]:
-            df.loc[df.index[i], 'Buy_signal'] = df['close'].iloc[i]
+            df.loc[df.index[i],'Buy_signal'] = 1
+            df.loc[df.index[i],'Sell_signal'] = 0
         elif df['OBV'].iloc[i] < avg.iloc[i] and df['OBV'].iloc[i-1] >= avg.iloc[i-1]:
-            df.loc[df.index[i], 'Sell_signal'] = df['close'].iloc[i]
+            df.loc[df.index[i],'Sell_signal'] = 1
+            df.loc[df.index[i],'Buy_signal'] = 0
+        else:
+            df.loc[df.index[i],'Buy_signal'] = 0
+            df.loc[df.index[i],'Sell_signal'] = 0
     
     return df
 
-# Function to update the plot
-def update_plot(frame):
-    global df, times
-    current_time = datetime.now().strftime('%H:%M:%S')
-    final = df['close'].iloc[-1]
-    new_stock_data = generate_stock_data('AAPL', final, num_minutes=1)
-    new_stock_data = pd.DataFrame(new_stock_data)[['timestamp', 'close', 'volume']].set_index('timestamp')
+def group(frame, close):
+    global stocks
+    new_stock_data = generate_stock_data("Mishra", close, frame)
+    new_stock_data=pd.DataFrame(new_stock_data)
+    stocks=pd.concat([stocks,new_stock_data],ignore_index=False)
+    df = calculate_obv(stocks)
+    df = calculate_obv_strategy(df, 5)
+    df=df.iloc[-len(new_stock_data):]
+    append_to_csv(df, 'obv.csv')
 
-    df = pd.concat([df, new_stock_data])
-    df = calculate_obv(df)
-    df = calculate_obv_strategy(df)
-    
-    if len(times) >= 60:
-        times = times[-59:] + [current_time]
-    else:
-        times.append(current_time)
-    
-    obv = df['OBV'][-60:].to_numpy()
+# Initialize close price
+global close
+close = 200
+# Create an empty DataFrame to hold stock data
+stocks = pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
 
-    ax.clear()
-    ax.plot(times, obv, label='OBV')
-    ax.set_xticklabels(times, rotation=45, ha='right')
-    ax.set_title("Real-Time OBV Plot")
-    ax.set_ylabel("OBV")
-    ax.set_xlabel("Time")
-    ax.legend()
+# Schedule the group function
+schedule.every(1).minutes.do(group, 5, close)
 
-    buy = df['Buy_signal'].iloc[-1]
-    sell = df['Sell_signal'].iloc[-1]
-
-    if not pd.isna(buy):
-        ax.annotate('Buy', (times[-1], obv[-1]), textcoords="offset points", xytext=(0,10), ha='center', color='green')
-    
-    if not pd.isna(sell):
-        ax.annotate('Sell', (times[-1], obv[-1]), textcoords="offset points", xytext=(0,10), ha='center', color='red')
-
-# Initial data generation
-stocks = generate_stock_data("AAPL", 200)
-df = pd.DataFrame(stocks).set_index('timestamp')
-df = calculate_obv(df)
-df = calculate_obv_strategy(df)
-
-# Plot setup
-fig, ax = plt.subplots()
-times = list(df.index.strftime('%H:%M:%S'))
-
-# Animation setup
-ani = FuncAnimation(fig, update_plot, interval=1000, cache_frame_data=False)
-
-plt.show()
+# Run scheduled tasks until future_time is reached
+current_time = datetime.now()
+future_time = current_time + timedelta(hours=24)
+while datetime.now() < future_time:
+    schedule.run_pending()
