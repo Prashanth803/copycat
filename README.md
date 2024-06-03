@@ -1,3 +1,135 @@
+Given your setup where you have KafkaJS installed for Node.js and Python classes for calculating indicators, you can establish a workflow where Node.js handles the Kafka communication and Python performs the indicator calculations. Here's how you can structure this:
+
+1. **KafkaJS in Node.js**: Use KafkaJS to consume data from Kafka topics.
+2. **Inter-process Communication**: Send the data from Node.js to Python for processing.
+3. **Python for Processing**: Calculate the indicators using your Python classes.
+4. **Returning Results**: Send the processed results back to Node.js and produce the results to Kafka or another service.
+
+### Step-by-Step Implementation
+
+#### 1. KafkaJS Consumer in Node.js
+
+Create a Kafka consumer in Node.js that reads messages from Kafka topics.
+
+```javascript
+const { Kafka } = require('kafkajs');
+const { spawn } = require('child_process');
+
+const kafka = new Kafka({
+  clientId: 'my-app',
+  brokers: ['localhost:9092']
+});
+
+const consumer = kafka.consumer({ groupId: 'indicator-group' });
+
+const run = async () => {
+  await consumer.connect();
+  await consumer.subscribe({ topic: 'company-data', fromBeginning: true });
+
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      const data = message.value.toString();
+      console.log(`Received message: ${data}`);
+
+      // Call Python script for processing
+      const pythonProcess = spawn('python3', ['process_data.py', data]);
+
+      pythonProcess.stdout.on('data', (data) => {
+        console.log(`Processed data: ${data.toString()}`);
+        // Here you can send the processed data back to Kafka or another service
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        console.error(`Error from Python script: ${data.toString()}`);
+      });
+    },
+  });
+};
+
+run().catch(console.error);
+```
+
+#### 2. Python Script (`process_data.py`)
+
+Create a Python script to process the incoming data and calculate the indicators.
+
+```python
+import sys
+import json
+from your_indicator_module import calculate_indicators  # Replace with your actual module and function
+
+def main():
+    # Receive data from Node.js
+    data = sys.argv[1]
+    company_data = json.loads(data)
+
+    # Process the data
+    results = calculate_indicators(company_data)
+
+    # Output the results
+    print(json.dumps(results))
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 3. Python Indicator Calculation (Placeholder)
+
+Implement the `calculate_indicators` function in your Python module. This function should perform the necessary calculations.
+
+```python
+# your_indicator_module.py
+
+def calculate_indicators(company_data):
+    # Implement your indicator calculation logic here
+    results = {}
+    # Example processing
+    for company, data in company_data.items():
+        results[company] = some_indicator_function(data)  # Replace with actual logic
+    return results
+
+def some_indicator_function(data):
+    # Placeholder for actual indicator calculation
+    return sum(data) / len(data)  # Example calculation
+```
+
+#### 4. Node.js Producer for Processed Results (Optional)
+
+If you want to send the processed results back to Kafka, you can add a producer in your Node.js script.
+
+```javascript
+const producer = kafka.producer();
+
+const sendProcessedData = async (processedData) => {
+  await producer.connect();
+  await producer.send({
+    topic: 'processed-data',
+    messages: [{ value: processedData }],
+  });
+  await producer.disconnect();
+};
+
+// Inside the consumer eachMessage function
+pythonProcess.stdout.on('data', async (data) => {
+  const processedData = data.toString();
+  console.log(`Processed data: ${processedData}`);
+  await sendProcessedData(processedData);
+});
+```
+
+### Summary
+
+1. **KafkaJS Consumer**: Reads data from Kafka and sends it to the Python script.
+2. **Python Script**: Processes the data using indicator classes and returns the results.
+3. **KafkaJS Producer (Optional)**: Sends the processed results back to Kafka or another service.
+
+This setup allows you to leverage KafkaJS for Kafka communication in Node.js and Python for complex data processing and indicator calculations. Adjust the specific processing logic in your Python code as needed.
+
+
+
+
+
+
 import pandas as pd
 import numpy as np
 import os
