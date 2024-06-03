@@ -1,3 +1,112 @@
+import pandas as pd
+import numpy as np
+import os
+
+class EMA:
+    def __init__(self):
+        pass
+
+    def append_to_csv(self, df, file_path):
+        mode = 'w' if not os.path.isfile(file_path) else 'a'
+        df.to_csv(file_path, mode=mode, header=(mode == 'w'), index=False)
+        print("Data appended successfully to", file_path)
+
+    def round_float(self, value, precision):
+        return round(value, precision)
+
+    def detect_precision(self, value):
+        value_str = str(value)
+        if '.' in value_str:
+            decimal_part = value_str.split('.')[1]
+            return len(decimal_part)
+        else:
+            return 0
+
+    def calculate_sma(self, prices, period):
+        if len(prices) < period:
+            raise ValueError("Not enough data points to calculate SMA")
+        sma = sum(prices) / period
+        return [sma]
+
+    def calculate_ema(self, prices, period):
+        if len(prices) < 2 * period:
+            return []
+        
+        emas = []
+        round_precision = 2
+
+        # First EMA value using SMA
+        sma = self.calculate_sma(prices[:period], period)
+        previous_ema = sma[0]
+        emas.append(self.round_float(previous_ema, round_precision))
+
+        k = 2 / (1 + period)
+
+        for p in prices[period:]:
+            ema = (p * k) + (previous_ema * (1 - k))
+            previous_ema = ema
+            emas.append(self.round_float(ema, round_precision))
+
+        return emas
+
+    def generate_signals(self, prices, short_period, long_period):
+        if len(prices) < 2 * long_period:
+            print(len(prices))
+            return [], []
+
+        short_ema = self.calculate_ema(prices, short_period)
+        long_ema = self.calculate_ema(prices, long_period)
+
+        b_signal = []
+        s_signal = []
+
+        for i in range(len(long_ema)):
+            if i == 0:
+                b_signal.append(0)
+                s_signal.append(0)
+            else:
+                if short_ema[i] > long_ema[i] and short_ema[i-1] <= long_ema[i-1]:
+                    b_signal.append(1)
+                    s_signal.append(0)
+                elif short_ema[i] < long_ema[i] and short_ema[i-1] >= long_ema[i-1]:
+                    s_signal.append(1)
+                    b_signal.append(0)
+                else:
+                    b_signal.append(0)
+                    s_signal.append(0)
+
+        return b_signal, s_signal
+
+    def group(self, frame, new_stock_data):
+        global df
+        df = pd.concat([df, new_stock_data], ignore_index=True)
+        close_price = df['close'].to_numpy()
+
+        ema = self.calculate_ema(close_price, frame)
+        s_signal, b_signal = self.generate_signals(close_price, 5, 10)
+
+        df['EMA'] = [0.0] * (len(df) - len(ema)) + ema
+        df['buy'] = [0.0] * (len(df) - len(b_signal)) + b_signal
+        df['sell'] = [0.0] * (len(df) - len(s_signal)) + s_signal
+
+        self.append_to_csv(df, 'ema.csv')
+
+# Create an empty DataFrame to hold stock data
+stocks = pd.read_csv(r"C:\Users\K131249\pythondemo\indicators\intrada.csv")
+stocks = pd.DataFrame(stocks)
+
+# Initialize the EMA calculator
+ema_calculator = EMA()
+
+# Define the global DataFrame with required columns
+df = pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'rsi', 'ema_5','ema_13','ema_16', 'vwap', 'atr', 'super_upperband', 'super_lowerband', 'MACD', 'MACD_Signal'])
+
+# Schedule the group function
+ema_calculator.group(5, stocks)
+
+
+
+
 To efficiently receive data, calculate indicators, and return the results using Kafka and Python, you can structure your backend system in a modular and concurrent manner. Here’s a step-by-step guide to achieve this:
 
 ### Step 1: Set Up Kafka
