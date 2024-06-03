@@ -1,3 +1,127 @@
+Sure, let's delve deeper into the concepts of `ThreadPoolExecutor` and `Future` objects in Python.
+
+### ThreadPoolExecutor
+
+`ThreadPoolExecutor` is part of the `concurrent.futures` module in Python, which provides a high-level interface for asynchronously executing callables using threads or processes.
+
+#### Key Concepts of ThreadPoolExecutor
+
+1. **Thread Pool**: A pool of worker threads that can be used to execute tasks concurrently.
+2. **Executor**: An abstraction that manages the execution of callable objects. It handles scheduling and coordination of tasks.
+3. **Max Workers**: The maximum number of threads that can be used to execute tasks concurrently.
+
+#### Creating a ThreadPoolExecutor
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+# Example: Creating a ThreadPoolExecutor with 4 threads
+executor = ThreadPoolExecutor(max_workers=4)
+```
+
+- `max_workers` specifies the number of threads in the pool. If not specified, it defaults to the number of processors on the machine, multiplied by 5.
+
+#### Submitting Tasks to the Executor
+
+```python
+# Example: Submitting a task to the executor
+future = executor.submit(some_callable, *args, **kwargs)
+```
+
+- `submit` schedules the callable (a function or method) to be executed and returns a `Future` object representing the execution of the callable.
+- The callable can be a function or any object with a `__call__` method.
+- Any arguments for the callable are passed after the callable itself.
+
+### Future Objects
+
+A `Future` object represents the result of an asynchronous computation. It provides methods to check the status of the computation, wait for its completion, and retrieve the result.
+
+#### Key Methods of Future
+
+1. **`result()`**: Waits for the computation to complete and returns the result. If the computation raises an exception, this method will raise the same exception.
+2. **`done()`**: Returns `True` if the computation is complete.
+3. **`add_done_callback(fn)`**: Attaches a callable that will be called when the `Future` is done.
+
+#### Example Usage of Future
+
+```python
+# Example: Using Future to get result
+future = executor.submit(some_callable, *args)
+result = future.result()  # Blocks until the callable is complete and returns the result
+```
+
+### Detailed Explanation with Example
+
+Let's revisit the `IndicatorCalculator` class example to explain how `ThreadPoolExecutor` and `Future` objects are used.
+
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import concurrent.futures
+
+class IndicatorCalculator:
+    def calculate_indicators(self, stock_data, indicators):
+        results = {}
+        
+        # Create a ThreadPoolExecutor with a number of workers equal to the number of indicators
+        with ThreadPoolExecutor(max_workers=len(indicators)) as executor:
+            # Submit each indicator calculation to the executor
+            future_to_indicator = {executor.submit(indicator.calculate, stock_data['price']): indicator for indicator in indicators}
+            
+            # Process each future as it completes
+            for future in as_completed(future_to_indicator):
+                indicator = future_to_indicator[future]
+                try:
+                    results[indicator.__class__.__name__] = future.result()
+                except Exception as e:
+                    results[indicator.__class__.__name__] = str(e)
+        
+        return results
+```
+
+#### Breakdown
+
+1. **ThreadPoolExecutor Initialization**
+
+   ```python
+   with ThreadPoolExecutor(max_workers=len(indicators)) as executor:
+   ```
+
+   - Initializes a `ThreadPoolExecutor` with a number of threads equal to the number of indicators.
+   - The `with` statement ensures that the executor is properly cleaned up after use.
+
+2. **Submitting Tasks**
+
+   ```python
+   future_to_indicator = {executor.submit(indicator.calculate, stock_data['price']): indicator for indicator in indicators}
+   ```
+
+   - Uses a dictionary comprehension to submit each indicator's `calculate` method to the executor.
+   - `executor.submit(indicator.calculate, stock_data['price'])` schedules the `calculate` method for execution and returns a `Future` object.
+   - The dictionary maps each `Future` to its corresponding indicator object.
+
+3. **Processing Completed Futures**
+
+   ```python
+   for future in as_completed(future_to_indicator):
+       indicator = future_to_indicator[future]
+       try:
+           results[indicator.__class__.__name__] = future.result()
+       except Exception as e:
+           results[indicator.__class__.__name__] = str(e)
+   ```
+
+   - `as_completed(future_to_indicator)` returns an iterator that yields futures as they complete.
+   - For each completed `Future`:
+     - Retrieve the corresponding indicator from the `future_to_indicator` dictionary.
+     - Call `future.result()` to get the result of the `calculate` method. This blocks until the result is available.
+     - If the `calculate` method raises an exception, `future.result()` will raise the same exception, which can be caught and handled.
+
+### Summary
+
+- **ThreadPoolExecutor** manages a pool of threads to execute tasks concurrently.
+- **Future Objects** represent the result of an asynchronous computation, allowing you to check the status and retrieve the result once it’s ready.
+- Using `ThreadPoolExecutor` and `Future` objects, you can efficiently calculate multiple indicators concurrently, improving performance and responsiveness.
+
 To handle receiving data simultaneously for different time frames of nearly 200 stocks using sockets, you can structure your system to:
 
 1. **Receive Data via Sockets**: Use a socket server to receive real-time data.
