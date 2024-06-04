@@ -1,3 +1,20 @@
+import pandas as pd
+
+def calculate_obv(df):
+    df['OBV'] = 0  # Initialize the OBV column with 0
+
+    # Calculate the daily price change direction
+    df['Direction'] = 0
+    df.loc[df['close'] > df['close'].shift(1), 'Direction'] = 1
+    df.loc[df['close'] < df['close'].shift(1), 'Direction'] = -1
+
+    # Calculate OBV
+    df['OBV'] = (df['Direction'] * df['volume']).cumsum()
+
+    # Drop the auxiliary column
+    df.drop(columns=['Direction'], inplace=True)
+    
+    return df
 Given your setup where you have KafkaJS installed for Node.js and Python classes for calculating indicators, you can establish a workflow where Node.js handles the Kafka communication and Python performs the indicator calculations. Here's how you can structure this:
 
 1. **KafkaJS in Node.js**: Use KafkaJS to consume data from Kafka topics.
