@@ -1,3 +1,34 @@
+from confluent_kafka import Producer
+
+def delivery_report(err, msg):
+    """ Called once for each message produced to indicate delivery result.
+        Triggered by poll() or flush(). """
+    if err is not None:
+        print(f"Message delivery failed: {err}")
+    else:
+        print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
+# Kafka server details
+kafka_server = '192.168.1.100:9092'  # Replace with your Kafka server's IP and port
+
+# Producer configuration
+conf = {
+    'bootstrap.servers': kafka_server,
+    'client.id': 'python-producer'
+}
+
+# Create Producer instance
+producer = Producer(conf)
+
+# Produce a message
+topic = 'your-topic'
+message = 'Hello, Kafka!'
+
+producer.produce(topic, value=message, callback=delivery_report)
+producer.poll(1)  # Wait for delivery report
+producer.flush()  # Wait for any outstanding messages to be delivered
+
+print("Message sent to Kafka")
 import pandas as pd
 
 def calculate_obv(df):
