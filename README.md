@@ -1,3 +1,123 @@
+To send a row of a dataframe where one column specifies the topic to which it belongs, you need to parse the message accordingly in your consumer. You can achieve this by modifying the message handling logic to access and use the topic information from the message itself.
+
+Let's assume the dataframe row is serialized as a JSON string, and one of the keys in the JSON object is `topic`, which indicates the topic to which the message belongs.
+
+Here's how you can modify your consumer to handle such messages:
+
+1. **Install `pandas`** if you haven't already:
+
+   ```bash
+   pip install pandas
+   ```
+
+2. **Modify the consumer script** to parse the incoming messages and extract the topic information.
+
+Here's the modified consumer script:
+
+```python
+from confluent_kafka import Consumer, KafkaException, KafkaError
+import pandas as pd
+import json
+
+# Configuration for Kafka Consumer
+conf = {
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'my_group',
+    'auto.offset.reset': 'earliest'
+}
+
+# Create the Kafka Consumer
+consumer = Consumer(conf)
+
+# Initialize empty DataFrames for each topic
+dataframes = {
+    'topic1': pd.DataFrame(columns=['timestamp', 'value', 'topic']),
+    'topic2': pd.DataFrame(columns=['timestamp', 'value', 'topic'])
+}
+
+def add_message_to_dataframe(topic, message):
+    """Add a message to the appropriate dataframe based on topic."""
+    try:
+        message_data = json.loads(message)
+        timestamp = message_data.get('timestamp')
+        value = message_data.get('value')
+        
+        # Append the data to the corresponding dataframe
+        new_row = pd.DataFrame({'timestamp': [timestamp], 'value': [value], 'topic': [topic]})
+        global dataframes
+        if topic in dataframes:
+            dataframes[topic] = pd.concat([dataframes[topic], new_row], ignore_index=True)
+        else:
+            print(f"Unknown topic: {topic}")
+    except json.JSONDecodeError:
+        print(f"Failed to decode JSON message: {message}")
+
+def basic_consume_loop(consumer, topics):
+    try:
+        consumer.subscribe(topics)
+
+        while True:
+            msg = consumer.poll(timeout=1.0)
+            if msg is None:
+                continue
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                elif msg.error():
+                    raise KafkaException(msg.error())
+            else:
+                message_value = msg.value().decode('utf-8')
+                try:
+                    message_json = json.loads(message_value)
+                    message_topic = message_json['topic']
+                    print(f"Received message: {message_value} from topic: {message_topic}")
+                    add_message_to_dataframe(message_topic, message_value)
+                except KeyError:
+                    print(f"Message does not contain 'topic' key: {message_value}")
+                except json.JSONDecodeError:
+                    print(f"Failed to decode JSON message: {message_value}")
+
+    finally:
+        consumer.close()
+
+# List of topics to subscribe to
+topics = ['topic1', 'topic2']
+basic_consume_loop(consumer, topics)
+
+# Save dataframes to CSV files after consuming messages
+dataframes['topic1'].to_csv('topic1_data.csv', index=False)
+dataframes['topic2'].to_csv('topic2_data.csv', index=False)
+```
+
+### Explanation
+
+1. **Consumer Configuration and Initialization**:
+   - The `conf` dictionary specifies the Kafka consumer configuration.
+   - The `consumer` object is created with this configuration.
+
+2. **Initialize DataFrames**:
+   - Two empty dataframes are initialized, one for each topic (`topic1` and `topic2`), with columns for `timestamp`, `value`, and `topic`.
+
+3. **Function to Add Messages to DataFrame**:
+   - The `add_message_to_dataframe` function takes a topic and a message as input.
+   - It parses the message (assumed to be a JSON string) to extract `timestamp`, `value`, and `topic`.
+   - It creates a new row with this data and appends it to the appropriate dataframe.
+
+4. **Message Handling Loop**:
+   - The `basic_consume_loop` function subscribes to the specified topics and enters an infinite loop to poll for messages.
+   - For each received message, it checks for errors and, if there are none, decodes the message and topic.
+   - It then calls `add_message_to_dataframe` to add the message to the appropriate dataframe.
+
+5. **Error Handling**:
+   - The code handles potential errors, such as missing `topic` keys in the message or JSON decoding errors.
+
+6. **Saving DataFrames**:
+   - After the consumer loop ends, the dataframes are saved to CSV files.
+
+This setup allows you to dynamically handle messages from different topics and store them in separate dataframes, which can later be saved to files or used for further processing.
+
+
+
 To subscribe to a Kafka producer in Node.js using a Python consumer, you need to set up Kafka producers and consumers in each respective language. Here's a step-by-step guide to help you achieve this:
 
 ### Step 1: Set Up Kafka
