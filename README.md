@@ -1,3 +1,137 @@
+To subscribe to a Kafka producer in Node.js using a Python consumer, you need to set up Kafka producers and consumers in each respective language. Here's a step-by-step guide to help you achieve this:
+
+### Step 1: Set Up Kafka
+
+Ensure you have Kafka installed and running on your machine. You can download Kafka from the [Apache Kafka website](https://kafka.apache.org/quickstart) and follow the installation instructions for your operating system.
+
+### Step 2: Create a Kafka Producer in Node.js
+
+Install the `kafka-node` library:
+
+```bash
+npm install kafka-node
+```
+
+Create a producer script (`producer.js`):
+
+```javascript
+const kafka = require('kafka-node');
+const Producer = kafka.Producer;
+const client = new kafka.KafkaClient({ kafkaHost: 'localhost:9092' });
+const producer = new Producer(client);
+
+const topicsToCreate = [
+    {
+        topic: 'topic1',
+        partitions: 1,
+        replicationFactor: 1
+    },
+    {
+        topic: 'topic2',
+        partitions: 1,
+        replicationFactor: 1
+    }
+];
+
+client.createTopics(topicsToCreate, (error, result) => {
+    if (error) {
+        console.error('Error creating topics', error);
+    } else {
+        console.log('Topics created', result);
+    }
+});
+
+producer.on('ready', () => {
+    console.log('Producer is ready');
+    setInterval(() => {
+        const payloads = [
+            { topic: 'topic1', messages: 'Hello from topic1' },
+            { topic: 'topic2', messages: 'Hello from topic2' }
+        ];
+        producer.send(payloads, (err, data) => {
+            if (err) {
+                console.error('Error sending data', err);
+            } else {
+                console.log('Data sent', data);
+            }
+        });
+    }, 5000);
+});
+
+producer.on('error', (err) => {
+    console.error('Error in producer', err);
+});
+```
+
+Run the producer:
+
+```bash
+node producer.js
+```
+
+### Step 3: Create a Kafka Consumer in Python
+
+Install the `confluent-kafka` library:
+
+```bash
+pip install confluent-kafka
+```
+
+Create a consumer script (`consumer.py`):
+
+```python
+from confluent_kafka import Consumer, KafkaException, KafkaError
+
+conf = {
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'my_group',
+    'auto.offset.reset': 'earliest'
+}
+
+consumer = Consumer(conf)
+
+def basic_consume_loop(consumer, topics):
+    try:
+        consumer.subscribe(topics)
+
+        while True:
+            msg = consumer.poll(timeout=1.0)
+            if msg is None:
+                continue
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                elif msg.error():
+                    raise KafkaException(msg.error())
+            else:
+                print(f'Received message: {msg.value().decode("utf-8")} from topic: {msg.topic()}')
+
+    finally:
+        consumer.close()
+
+topics = ['topic1', 'topic2']
+basic_consume_loop(consumer, topics)
+```
+
+Run the consumer:
+
+```bash
+python consumer.py
+```
+
+### Explanation
+
+1. **Kafka Producer in Node.js**:
+    - The `kafka-node` library is used to create a producer.
+    - The producer creates two topics (`topic1` and `topic2`).
+    - It sends messages to these topics every 5 seconds.
+
+2. **Kafka Consumer in Python**:
+    - The `confluent-kafka` library is used to create a consumer.
+    - The consumer subscribes to both `topic1` and `topic2`.
+    - It polls for messages from these topics and prints them to the console.
+
+By following these steps, you can set up a Node.js producer to send messages to different topics and a Python consumer to subscribe to these topics and consume messages.
 To connect to a Kafka server using its server link, IP address, and port from Python, you can use the `confluent-kafka` library, which is a Python wrapper around the high-performance C/C++ Kafka client library `librdkafka`.
 
 ### Installation
