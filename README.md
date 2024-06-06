@@ -1,3 +1,50 @@
+import socket
+import json
+import pandas as pd
+
+def receive_json(socket):
+    buffer = ""
+    data_list = []
+
+    while True:
+        # Receive data in chunks
+        data = socket.recv(1024).decode('utf-8')  # Adjust buffer size as needed
+        if not data:
+            break
+        
+        buffer += data
+
+        while True:
+            try:
+                # Try to parse a complete JSON object from the buffer
+                json_obj, end = json.JSONDecoder().raw_decode(buffer)
+                buffer = buffer[end:].lstrip()  # Remove the parsed object from the buffer
+                data_list.append(json_obj)  # Append the JSON object to the list
+                print(json_obj)
+            except json.JSONDecodeError:
+                # If there is a decoding error, we need to wait for more data
+                break
+
+    return data_list
+
+def main():
+    # Example socket setup
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(('localhost', 12345))  # Replace with your server's address and port
+    
+    try:
+        data_list = receive_json(s)
+    finally:
+        s.close()
+
+    # Create DataFrame from the list of JSON objects
+    df = pd.DataFrame(data_list)
+    print(df)
+
+if __name__ == "__main__":
+    main()
+
+
 To send a row of a dataframe where one column specifies the topic to which it belongs, you need to parse the message accordingly in your consumer. You can achieve this by modifying the message handling logic to access and use the topic information from the message itself.
 
 Let's assume the dataframe row is serialized as a JSON string, and one of the keys in the JSON object is `topic`, which indicates the topic to which the message belongs.
