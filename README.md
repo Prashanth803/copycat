@@ -1,3 +1,117 @@
+Certainly! Here’s a revised version of your script to handle incoming Kafka messages using threads. When a topic is received, it triggers a new thread for processing. Further data for the same topic will wait until the thread for that topic is complete before starting a new one.
+
+```python
+import threading
+import queue
+from confluent_kafka import Consumer, KafkaException, KafkaError
+import pandas as pd
+import json
+
+# Dictionary to hold thread locks for each topic
+topic_locks = {}
+# Queue to handle messages
+message_queue = queue.Queue()
+
+# Function to process messages
+def process_messages():
+    while True:
+        topic, msg = message_queue.get()
+        with topic_locks[topic]:
+            try:
+                message_value = msg.value()
+                print(message_value)
+
+                df = json.loads(message_value)
+                print(df)
+
+                df_po = pd.DataFrame([df])
+                partition = msg.partition()
+                topic = msg.topic()
+
+                new_data = add_message_to_dataframe(topic, df_po, partition)
+                new_data = new_data.to_frame().T
+
+                ans[topic][partition] = pd.concat([ans[topic][partition], new_data], ignore_index=True)
+                print(">")
+                
+                last_row = ans[topic][partition].iloc[-1]
+                print(last_row)
+                print(">")
+
+                if len(ans[topic][partition]) > 35:
+                    ans.drop(e)
+                if len(ans[topic][partition]) == 35:
+                    AnalysisEngine(ans)
+
+                last_row = ans.iloc[-1]
+                send_data(last_row)
+            except Exception as e:
+                print(f"Error processing message: {e}")
+            finally:
+                message_queue.task_done()
+
+# Function to add message to the dataframe
+def add_message_to_dataframe(topic, df, partition):
+    # Implement your logic here
+    return df
+
+# Function to send data
+def send_data(data):
+    # Implement your logic here
+    pass
+
+# Function to analyze the data
+def AnalysisEngine(ans):
+    # Implement your logic here
+    pass
+
+# Kafka Consumer configuration
+consumer_config = {
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'mygroup',
+    'auto.offset.reset': 'earliest'
+}
+
+consumer = Consumer(consumer_config)
+consumer.subscribe(['mytopic'])
+
+# Create and start the worker threads
+num_worker_threads = 4
+for i in range(num_worker_threads):
+    threading.Thread(target=process_messages, daemon=True).start()
+
+try:
+    while True:
+        msg = consumer.poll(timeout=1.0)
+        
+        if msg is None:
+            continue
+        if msg.error():
+            if msg.error().code() == KafkaError.PARTITION_EOF:
+                continue
+            else:
+                raise KafkaException(msg.error())
+        
+        topic = msg.topic()
+        if topic not in topic_locks:
+            topic_locks[topic] = threading.Lock()
+        
+        message_queue.put((topic, msg))
+except KeyboardInterrupt:
+    pass
+finally:
+    consumer.close()
+```
+
+### Explanation
+1. **Thread Management**: Uses a `queue.Queue` to manage incoming messages and `threading.Lock` to ensure that messages for the same topic are processed sequentially.
+2. **Worker Threads**: A fixed number of worker threads (`num_worker_threads`) are created to process the messages from the queue.
+3. **Locking Mechanism**: Each topic has its own lock (`topic_locks[topic]`) to ensure that only one thread processes messages for a given topic at a time.
+4. **Message Processing**: The `process_messages` function processes each message in the queue, updating the dataframe and performing necessary operations.
+
+This setup ensures that messages for the same topic are processed sequentially, and you can scale the number of worker threads as needed.
+
+
 To set up a Kafka environment with 10 topics, each with 4 partitions, and a producer that sends data to these topics, followed by consumers that consume data based on topic and partition, you can follow this comprehensive template. We'll use `kafka-python` for interacting with Kafka.
 
 ### Steps
