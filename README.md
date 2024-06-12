@@ -1,3 +1,97 @@
+Polling messages in `AIOKafkaConsumer` can be achieved using the `getmany` method, which allows you to fetch multiple messages from different partitions in a single call. This can be more efficient than processing messages one by one, especially when dealing with high-throughput scenarios.
+
+Here is how you can modify the code to use `getmany` for polling messages:
+
+### Updated Code to Poll Messages
+
+```python
+import asyncio
+from aiokafka import AIOKafkaConsumer
+from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
+from process import Indicator
+from engine import Analysisengine
+
+# Configuration for the Kafka consumer
+KAFKA_BOOTSTRAP_SERVERS = 'your_bootstrap_servers'
+KAFKA_TOPICS = ['your_topic1', 'your_topic2']  # List your topics here
+KAFKA_GROUP_ID = 'your_group_id'
+POLL_TIMEOUT_MS = 1000  # Poll timeout in milliseconds
+
+def process_message(message):
+    print(f"Partition {message.partition}, Topic {message.topic}: {message.value.decode('utf-8')}")
+    # You can use Indicator, Analysisengine, or any other processing logic here
+
+async def process_partition_messages(partition, message_queue, executor):
+    loop = asyncio.get_event_loop()
+    while True:
+        message = await message_queue.get()
+        if message is None:  # Shutdown signal
+            break
+        await loop.run_in_executor(executor, process_message, message)
+        message_queue.task_done()
+
+async def start_consumer():
+    consumer = AIOKafkaConsumer(
+        *KAFKA_TOPICS,  # Unpack the list of topics
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id=KAFKA_GROUP_ID,
+        enable_auto_commit=False
+    )
+
+    await consumer.start()
+    try:
+        partition_queues = defaultdict(asyncio.Queue)
+        partition_tasks = {}
+        executor = ThreadPoolExecutor(max_workers=10)  # Adjust the number of workers as needed
+
+        while True:
+            # Poll messages from Kafka
+            messages = await consumer.getmany(timeout_ms=POLL_TIMEOUT_MS)
+            for tp, msgs in messages.items():
+                partition = tp.partition
+                if partition not in partition_tasks:
+                    queue = partition_queues[partition]
+                    task = asyncio.create_task(process_partition_messages(partition, queue, executor))
+                    partition_tasks[partition] = task
+
+                for msg in msgs:
+                    await partition_queues[partition].put(msg)
+    finally:
+        for partition, task in partition_tasks.items():
+            await partition_queues[partition].put(None)
+            await task
+
+        await consumer.stop()
+        executor.shutdown(wait=True)
+
+if __name__ == '__main__':
+    asyncio.run(start_consumer())
+```
+
+### Key Changes for Polling Messages:
+
+1. **POLL_TIMEOUT_MS**:
+   - Added a `POLL_TIMEOUT_MS` constant to define the timeout for polling messages.
+
+2. **Using `getmany`**:
+   - Replaced the `async for msg in consumer` loop with a `while True` loop that calls `consumer.getmany(timeout_ms=POLL_TIMEOUT_MS)`.
+   - `getmany` returns a dictionary where the keys are `TopicPartition` objects and the values are lists of messages. This allows you to handle messages from multiple partitions efficiently.
+
+3. **Processing Polled Messages**:
+   - Loop through the dictionary returned by `getmany` and process messages from each partition.
+   - Ensure each message is put into the corresponding partition queue.
+
+### Explanation:
+
+- **Polling Messages**: The `consumer.getmany(timeout_ms=POLL_TIMEOUT_MS)` method is used to poll messages. It fetches messages from multiple partitions and returns them as a dictionary.
+- **Handling Polled Messages**: The loop iterates over the dictionary, retrieves messages for each partition, and puts them into the appropriate partition queue for processing.
+- **Efficient Processing**: This approach ensures that messages are processed efficiently, even when dealing with high-throughput scenarios, as it reduces the overhead of individual message fetching.
+
+By using `getmany`, you can poll multiple messages in a single call, which can significantly improve the performance and efficiency of your Kafka consumer.
+
+
+
 Using `asyncio` instead of threading can still be beneficial even when the primary task isn't I/O-bound. Here are some reasons why `asyncio` might be preferable over threading:
 
 1. **Lower Overhead**:
