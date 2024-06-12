@@ -1,3 +1,103 @@
+To handle Kafka messages with a multi-threaded approach where each partition has its own thread, you can use Python with the `confluent-kafka` library. Here's a step-by-step guide to achieve this:
+
+1. **Install the required library:**
+   ```sh
+   pip install confluent-kafka
+   ```
+
+2. **Create a Kafka consumer that will spawn threads for each partition:**
+
+   Here's a sample implementation:
+
+   ```python
+   import threading
+   import queue
+   from confluent_kafka import Consumer, KafkaException
+
+   # Configuration for the Kafka consumer
+   conf = {
+       'bootstrap.servers': 'your_bootstrap_servers',
+       'group.id': 'your_group_id',
+       'auto.offset.reset': 'earliest',
+       'enable.auto.commit': False
+   }
+
+   consumer = Consumer(conf)
+
+   # Function to handle messages for a partition
+   def process_partition_messages(partition, message_queue):
+       while True:
+           message = message_queue.get()
+           if message is None:  # Shutdown signal
+               break
+           # Process the message
+           print(f"Partition {partition}: {message.value().decode('utf-8')}")
+           consumer.commit(message)  # Commit the message
+
+   # Dictionary to hold the queues and threads for each partition
+   partition_threads = {}
+
+   # Function to assign partitions to the consumer
+   def on_assign(consumer, partitions):
+       for partition in partitions:
+           partition = partition.partition
+           if partition not in partition_threads:
+               message_queue = queue.Queue()
+               thread = threading.Thread(target=process_partition_messages, args=(partition, message_queue))
+               partition_threads[partition] = {'queue': message_queue, 'thread': thread}
+               thread.start()
+       consumer.assign(partitions)
+
+   # Function to revoke partitions from the consumer
+   def on_revoke(consumer, partitions):
+       for partition in partitions:
+           partition = partition.partition
+           if partition in partition_threads:
+               # Signal the thread to shut down
+               partition_threads[partition]['queue'].put(None)
+               partition_threads[partition]['thread'].join()
+               del partition_threads[partition]
+       consumer.unassign()
+
+   consumer.subscribe(['your_topic'], on_assign=on_assign, on_revoke=on_revoke)
+
+   # Poll for messages
+   try:
+       while True:
+           msg = consumer.poll(1.0)
+           if msg is None:
+               continue
+           if msg.error():
+               if msg.error().code() == KafkaError._PARTITION_EOF:
+                   continue
+               elif msg.error():
+                   raise KafkaException(msg.error())
+           # Put the message in the respective partition's queue
+           partition = msg.partition()
+           partition_threads[partition]['queue'].put(msg)
+   except KeyboardInterrupt:
+       pass
+   finally:
+       consumer.close()
+
+       # Ensure all threads are properly shut down
+       for partition in partition_threads:
+           partition_threads[partition]['queue'].put(None)
+           partition_threads[partition]['thread'].join()
+   ```
+
+3. **Explanation:**
+   - **Kafka Consumer Configuration:** Configures the Kafka consumer.
+   - **`process_partition_messages` function:** This function runs in a separate thread for each partition and processes messages from a queue.
+   - **`on_assign` and `on_revoke` functions:** Handle partition assignment and revocation, creating and stopping threads as needed.
+   - **Main loop:** Polls for messages and puts them in the appropriate queue based on the partition.
+
+This implementation ensures that each partition has its own dedicated thread for processing messages, and new messages for the same partition are queued for processing by the same thread. This approach helps in maintaining order within each partition while enabling concurrent processing across different partitions.
+
+
+
+
+
 Certainly! Here’s a revised version of your script to handle incoming Kafka messages using threads. When a topic is received, it triggers a new thread for processing. Further data for the same topic will wait until the thread for that topic is complete before starting a new one.
 
 ```python
