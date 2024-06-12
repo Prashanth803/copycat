@@ -1,31 +1,103 @@
-To handle Kafka messages with a multi-threaded approach where each partition has its own thread, you can use Python with the `confluent-kafka` library. Here's a step-by-step guide to achieve this:
+Using `asyncio` instead of threading can still be beneficial even when the primary task isn't I/O-bound. Here are some reasons why `asyncio` might be preferable over threading:
 
-1. **Install the required library:**
-   ```sh
-   pip install confluent-kafka
-   ```
+1. **Lower Overhead**:
+   - **Thread Creation**: Creating and managing threads has a higher overhead compared to creating coroutines with `asyncio`.
+   - **Context Switching**: Threads require context switching by the operating system, which is more costly than the context switching between coroutines managed by `asyncio`.
 
-2. **Create a Kafka consumer that will spawn threads for each partition:**
+2. **Scalability**:
+   - **Resource Management**: `asyncio` can manage thousands of tasks more efficiently than threading can manage the same number of threads.
+   - **Memory Usage**: Coroutines use less memory compared to threads, which is particularly beneficial for applications that need to handle a large number of concurrent tasks.
 
-   Here's a sample implementation:
+3. **Concurrency Model**:
+   - **Simpler Concurrency**: `asyncio` provides a single-threaded concurrency model, which can be easier to reason about compared to multi-threading, especially for avoiding race conditions and deadlocks.
+   - **Deterministic Execution**: The event loop in `asyncio` ensures that coroutines are executed deterministically, which can simplify debugging and testing.
 
-   ```python
-   import threading
-   import queue
-   from confluent_kafka import Consumer, KafkaException
+4. **Integrated Features**:
+   - **Built-in Libraries**: `asyncio` integrates well with modern Python features and libraries, providing a rich set of tools for managing concurrency.
+   - **Standard Library**: Being part of the standard library, `asyncio` is well-maintained and supported by the Python community.
 
-   # Configuration for the Kafka consumer
-   conf = {
-       'bootstrap.servers': 'your_bootstrap_servers',
-       'group.id': 'your_group_id',
-       'auto.offset.reset': 'earliest',
-       'enable.auto.commit': False
-   }
+### Example Using `asyncio` for Non-I/O-Bound Task Processing
 
-   consumer = Consumer(conf)
+Even if your Kafka message processing tasks are CPU-bound, you can still use `asyncio` effectively. However, you may need to combine it with `concurrent.futures.ThreadPoolExecutor` for truly CPU-bound tasks to prevent blocking the event loop.
 
-   # Function to handle messages for a partition
-   def process_partition_messages(partition, message_queue):
+Here's an example:
+
+```python
+import asyncio
+from aiokafka import AIOKafkaConsumer
+from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
+
+# Configuration for the Kafka consumer
+KAFKA_BOOTSTRAP_SERVERS = 'your_bootstrap_servers'
+KAFKA_TOPIC = 'your_topic'
+KAFKA_GROUP_ID = 'your_group_id'
+
+# Function to process messages from a specific partition
+def process_message(message):
+    # Simulate CPU-bound processing
+    print(f"Partition {message.partition}: {message.value.decode('utf-8')}")
+
+# Function to process messages asynchronously
+async def process_partition_messages(partition, message_queue, executor):
+    loop = asyncio.get_event_loop()
+    while True:
+        message = await message_queue.get()
+        if message is None:  # Shutdown signal
+            break
+        # Run CPU-bound task in a thread pool
+        await loop.run_in_executor(executor, process_message, message)
+        message_queue.task_done()
+
+# Main function to consume messages
+async def consume():
+    consumer = AIOKafkaConsumer(
+        KAFKA_TOPIC,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id=KAFKA_GROUP_ID,
+        enable_auto_commit=False
+    )
+
+    await consumer.start()
+    try:
+        partition_queues = defaultdict(asyncio.Queue)
+        partition_tasks = {}
+        executor = ThreadPoolExecutor(max_workers=10)  # Adjust the number of workers as needed
+
+        async for msg in consumer:
+            partition = msg.partition
+            if partition not in partition_tasks:
+                queue = partition_queues[partition]
+                task = asyncio.create_task(process_partition_messages(partition, queue, executor))
+                partition_tasks[partition] = task
+
+            # Put the message into the corresponding partition queue
+            await partition_queues[partition].put(msg)
+    finally:
+        # Shutdown handling
+        for partition, task in partition_tasks.items():
+            await partition_queues[partition].put(None)
+            await task
+
+        await consumer.stop()
+        executor.shutdown(wait=True)
+
+# Entry point
+if __name__ == '__main__':
+    asyncio.run(consume())
+```
+
+### Explanation:
+
+1. **ThreadPoolExecutor**: Used to offload CPU-bound tasks to a pool of threads to avoid blocking the event loop.
+2. **`run_in_executor`**: Allows running the CPU-bound `process_message` function in the thread pool.
+3. **Efficient Queue Management**: Each partition has its own queue, and messages are processed concurrently by the event loop.
+
+By combining `asyncio` with a thread pool for CPU-bound tasks, you can achieve a highly efficient and scalable solution that leverages the benefits of both asynchronous and multi-threaded programming models. This approach ensures that your application remains responsive and can handle a high volume of concurrent tasks effectively.
+
+
+
+, message_queue):
        while True:
            message = message_queue.get()
            if message is None:  # Shutdown signal
