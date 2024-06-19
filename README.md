@@ -1,3 +1,37 @@
+const net = require('net');
+
+// Create a TCP server
+const server = net.createServer((socket) => {
+    console.log('Client connected');
+
+    // Handle incoming data from the client
+    socket.on('data', (data) => {
+        console.log(`Received data: ${data}`);
+        
+        // Send a response back to the client
+        socket.write('Hello from the server!\n');
+    });
+
+    // Handle client disconnection
+    socket.on('end', () => {
+        console.log('Client disconnected');
+    });
+
+    // Handle errors
+    socket.on('error', (err) => {
+        console.error(`Socket error: ${err}`);
+    });
+});
+
+// Make the server listen on port 1234
+const PORT = 1234;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
+
+
+
+
 The round-robin partitioning strategy in Kafka affects producers, which determine how messages are distributed across partitions within a single topic. However, the presence of multiple consumers on different topics impacts the overall system differently. Here’s a detailed look at how the round-robin partitioner and multiple consumers on different topics interact and affect each other:
 
 ### Round-Robin Partitioning and Its Impact
