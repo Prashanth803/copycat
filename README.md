@@ -1,3 +1,76 @@
+A design document, often referred to as a design doc, is a comprehensive guide that outlines the architecture, components, and processes of a project. Here’s a general structure to help you get started:
+
+1. **Title Page**
+   - Project Title
+   - Author(s)
+   - Date
+   - Version
+
+2. **Table of Contents**
+   - List of sections and subsections with page numbers
+
+3. **Introduction**
+   - **Purpose**: Explain the purpose of the document and the project.
+   - **Scope**: Define the scope of the project.
+   - **Audience**: Identify the intended audience for the document.
+   - **Overview**: Provide a brief overview of what the document contains.
+
+4. **Project Overview**
+   - **Background**: Context and background information about the project.
+   - **Objectives**: Clear and measurable objectives of the project.
+   - **Stakeholders**: List of stakeholders involved in the project.
+
+5. **Requirements**
+   - **Functional Requirements**: Specific behaviors or functions of the system.
+   - **Non-functional Requirements**: Performance, security, usability, etc.
+   - **Constraints**: Any limitations or constraints affecting the design.
+
+6. **System Architecture**
+   - **High-Level Architecture**: Overview of the system architecture with diagrams.
+   - **Components**: Description of major system components.
+   - **Data Flow**: Data flow diagrams or descriptions.
+
+7. **Detailed Design**
+   - **Component Design**: Detailed design of each component.
+   - **Interfaces**: Description of interfaces between components.
+   - **Data Models**: Database schemas, data models, and related information.
+
+8. **User Interface Design**
+   - **Wireframes**: Sketches or wireframes of key screens.
+   - **User Flows**: Descriptions or diagrams of user flows.
+
+9. **Security Considerations**
+   - **Threat Model**: Potential security threats and mitigation strategies.
+   - **Security Measures**: Specific security measures implemented.
+
+10. **Testing and Validation**
+    - **Test Plan**: Plan for testing the system.
+    - **Test Cases**: Specific test cases with expected outcomes.
+    - **Validation**: How the system will be validated against requirements.
+
+11. **Deployment Plan**
+    - **Environment**: Description of the deployment environment.
+    - **Deployment Steps**: Steps for deploying the system.
+    - **Rollback Plan**: Plan for rolling back if deployment fails.
+
+12. **Maintenance and Support**
+    - **Maintenance Plan**: Plan for ongoing maintenance.
+    - **Support**: Support processes and contacts.
+
+13. **Appendices**
+    - **Glossary**: Definitions of terms used in the document.
+    - **References**: References to other documents or resources.
+
+14. **Revision History**
+    - **Change Log**: Record of changes made to the document.
+
+When writing a design document, aim for clarity and conciseness. Use diagrams and visual aids to supplement the text and make complex information more accessible.
+
+
+
+
+
+
 The error you're encountering, `SQLite objects created in a thread can only be used in that same thread`, occurs because SQLite connections are not thread-safe. When you try to use the same SQLite connection in multiple threads, it leads to this error. 
 
 To prevent this, you need to ensure that each thread or async task gets its own database connection. Here are some ways to handle this:
