@@ -1,3 +1,32 @@
+// Import the Socket.IO client library
+import { io } from "socket.io-client";
+
+// Connect to the server
+const socket = io('http://localhost:3000'); // Replace with your server URL
+
+// Listen for the 'connect' event
+socket.on('connect', () => {
+  console.log('Connected to the server');
+});
+
+// Listen for the 'disconnect' event
+socket.on('disconnect', () => {
+  console.log('Disconnected from the server');
+});
+
+// Listen for custom events from the server
+socket.on('message', (data) => {
+  console.log('Message from server:', data);
+});
+
+// Emit events to the server
+socket.emit('message', { msg: 'Hello, server!' });
+
+
+
+
+
+
 Here’s a sample design document for a Trading Recommendation System:
 
 ---
