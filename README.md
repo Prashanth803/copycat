@@ -1,3 +1,129 @@
+When testing a graph module that renders graphs on a web page, you typically need to consider both unit tests and integration tests. For unit tests, you can test the logic and data manipulation, while for integration tests, you can ensure the graph is rendered correctly in the DOM. Libraries such as Jest and React Testing Library can help with unit tests, while Puppeteer can be used for integration tests.
+
+### Example Graph Component
+
+Let's assume you have a React component that renders a candlestick chart using a library like Chart.js.
+
+#### `CandlestickChart.js`
+```javascript
+import React from 'react';
+import { Chart } from 'react-chartjs-2';
+
+const CandlestickChart = ({ data }) => {
+  const chartData = {
+    datasets: [{
+      label: 'Candlestick Chart',
+      data: data,
+    }],
+  };
+
+  return <Chart type='candlestick' data={chartData} />;
+};
+
+export default CandlestickChart;
+```
+
+### Unit Test with React Testing Library
+
+#### `CandlestickChart.test.js`
+```javascript
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import CandlestickChart from './CandlestickChart';
+
+test('renders candlestick chart', () => {
+  const data = [
+    { t: '2023-01-01', o: 100, h: 150, l: 90, c: 120 },
+    { t: '2023-01-02', o: 120, h: 160, l: 110, c: 140 },
+  ];
+
+  render(<CandlestickChart data={data} />);
+
+  // Check if canvas element is rendered
+  const canvas = screen.getByRole('img'); // Chart.js renders canvas as <img> for accessibility
+  expect(canvas).toBeInTheDocument();
+});
+```
+
+### Integration Test with Puppeteer
+
+#### `CandlestickChart.puppeteer.test.js`
+```javascript
+const puppeteer = require('puppeteer');
+
+describe('CandlestickChart dynamic rendering', () => {
+  let browser;
+  let page;
+
+  beforeAll(async () => {
+    browser = await puppeteer.launch();
+    page = await browser.newPage();
+  });
+
+  afterAll(async () => {
+    await browser.close();
+  });
+
+  test('renders candlestick chart on page', async () => {
+    await page.goto('http://localhost:3000'); // assuming your app is running on localhost:3000
+
+    // Wait for the chart to render
+    await page.waitForSelector('canvas');
+
+    // Check if the canvas element is there
+    const canvasExists = await page.$eval('canvas', canvas => !!canvas);
+    expect(canvasExists).toBe(true);
+
+    // Optional: Take a screenshot for visual verification
+    await page.screenshot({ path: 'candlestick-chart.png' });
+  });
+});
+```
+
+### Explanation
+
+1. **Unit Test with React Testing Library**:
+   - Import the necessary libraries and the component to test.
+   - Use `render` to render the `CandlestickChart` component with sample data.
+   - Check if the `canvas` element (or `img` element in the case of Chart.js) is present in the document using `screen.getByRole`.
+
+2. **Integration Test with Puppeteer**:
+   - Use Puppeteer to launch a headless browser and navigate to your application's URL.
+   - Wait for the `canvas` element to appear in the DOM using `page.waitForSelector`.
+   - Verify the presence of the `canvas` element using `page.$eval`.
+   - Optionally take a screenshot for visual verification.
+
+### Running the Tests
+
+- **Unit Tests**: Run using `npm test` or `npx jest`.
+- **Integration Tests**: Add a separate script in `package.json`:
+  ```json
+  "scripts": {
+    "test": "jest",
+    "test:puppeteer": "jest --config=puppeteer.config.js"
+  }
+  ```
+
+Create `puppeteer.config.js` for configuring Jest to run Puppeteer tests:
+```javascript
+module.exports = {
+  preset: 'jest-puppeteer',
+};
+```
+
+Run the Puppeteer tests with:
+```bash
+npm run test:puppeteer
+```
+
+This setup ensures comprehensive testing of your graph module, covering both the logic and the actual rendering in the browser.
+
+
+
+
+
+
 To create a Socket.IO client in JavaScript, you will need to follow these steps:
 
 ### Step 1: Install the `socket.io-client` Library
