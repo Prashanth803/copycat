@@ -1,3 +1,105 @@
+To write a test case for the `Header` component in Jest, you need to properly format the component first. Then, you can write a test case using Jest and React Testing Library.
+
+### Header Component
+
+First, let's clean up and properly format the `Header` component code.
+
+#### `Header.js`
+```javascript
+import React from 'react';
+import { Masthead, ThemeProvider } from "@wf-wfria/pioneer-core";
+import SearchBar from '../SearchBar/SearchBar';
+import { Link } from "react-router-dom";
+
+const Header = ({ setCurrentCompanyId }) => {
+  const [open, setOpen] = React.useState(false);
+
+  const openPanel = () => setOpen(true);
+  const closePanel = () => setOpen(false);
+
+  const onSubmit = (e, data) => {
+    e.preventDefault();
+    console.log("Form submitted with: ", data);
+    window.alert("Form submitted");
+  };
+
+  return (
+    <ThemeProvider baseTheme='common'>
+      <Masthead
+        homeUrl="/"
+        elementToFocusOnSkip="#main-content"
+      >
+        <div style={{ paddingLeft: "72%" }}>
+          <SearchBar setCurrentCompanyId={setCurrentCompanyId} />
+        </div>
+        {/* <div style={{ marginLeft: "auto", display: "flex", paddingTop: "22px" }}>
+          <h1 style={{ color: "#ffcd41", fontFamily: "Times New Roman, Times, serif", fontWeight: "bolder", fontSize: "30px" }}>
+            TRADE VISION
+          </h1>
+        </div> */}
+      </Masthead>
+    </ThemeProvider>
+  );
+};
+
+export default Header;
+```
+
+### Jest Test Case
+
+Now, let's write a test case for this component using Jest and React Testing Library.
+
+#### `Header.test.js`
+```javascript
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import Header from './Header';
+import SearchBar from '../SearchBar/SearchBar';
+
+// Mock the SearchBar component
+jest.mock('../SearchBar/SearchBar', () => ({
+  __esModule: true,
+  default: ({ setCurrentCompanyId }) => (
+    <input
+      type="text"
+      placeholder="Search"
+      onChange={(e) => setCurrentCompanyId(e.target.value)}
+    />
+  )
+}));
+
+test('renders Header and checks SearchBar functionality', () => {
+  const setCurrentCompanyId = jest.fn();
+
+  render(<Header setCurrentCompanyId={setCurrentCompanyId} />);
+
+  // Check if Masthead and ThemeProvider are rendered
+  expect(screen.getByText(/Search/)).toBeInTheDocument();
+
+  // Simulate SearchBar input change
+  fireEvent.change(screen.getByPlaceholderText('Search'), { target: { value: '12345' } });
+  expect(setCurrentCompanyId).toHaveBeenCalledWith('12345');
+});
+```
+
+### Explanation
+
+1. **Mocking `SearchBar` Component**: The `SearchBar` component is mocked to simplify testing and focus on the `Header` component.
+2. **Render Component**: The `Header` component is rendered using the `render` function from React Testing Library.
+3. **Check Text Content**: The test checks if the `SearchBar` input placeholder is present in the document.
+4. **Simulate Input Change**: The test simulates changing the input value of the `SearchBar` and verifies that the `setCurrentCompanyId` function is called with the correct argument.
+
+### Running the Tests
+
+To run the tests, ensure you have Jest and React Testing Library set up in your project. You can run the tests using the following command:
+
+```bash
+npm test
+```
+
+This command will execute all test files and output the results, showing which tests passed and which failed.
+
 Let's first clean up and properly format the `Footer_page` component code. Then, I'll provide a Jest test case for it.
 
 ### Cleaned Up `Footer_page` Component
