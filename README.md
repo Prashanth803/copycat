@@ -1,3 +1,132 @@
+To test the `DateTimeRangePicker` component using Jest and React Testing Library, you'll need to set up your testing environment properly. Here's how you can write a test program for it:
+
+1. **Install the necessary dependencies**:
+   Ensure you have `jest` and `@testing-library/react` installed. You can install them using npm or yarn:
+
+   ```sh
+   npm install --save-dev jest @testing-library/react @testing-library/jest-dom
+   ```
+
+2. **Write the test**:
+   Create a test file, for example, `DateTimeRangePicker.test.js`, and write the test cases:
+
+```javascript
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import DateTimeRangePicker from './DateTimeRangePicker';
+
+describe('DateTimeRangePicker', () => {
+  let setShowRealTime, setStartDateTime, setEndDateTime;
+
+  beforeEach(() => {
+    setShowRealTime = jest.fn();
+    setStartDateTime = jest.fn();
+    setEndDateTime = jest.fn();
+  });
+
+  test('renders correctly', () => {
+    const { getByLabelText, getByText } = render(
+      <DateTimeRangePicker
+        setShowRealTime={setShowRealTime}
+        startDateTime=""
+        setStartDateTime={setStartDateTime}
+        endDateTime=""
+        setEndDateTime={setEndDateTime}
+      />
+    );
+
+    expect(getByLabelText(/start/i)).toBeInTheDocument();
+    expect(getByLabelText(/end/i)).toBeInTheDocument();
+    expect(getByText(/submit/i)).toBeInTheDocument();
+    expect(getByText(/reset/i)).toBeInTheDocument();
+  });
+
+  test('handles date time input changes', () => {
+    const { getByLabelText } = render(
+      <DateTimeRangePicker
+        setShowRealTime={setShowRealTime}
+        startDateTime=""
+        setStartDateTime={setStartDateTime}
+        endDateTime=""
+        setEndDateTime={setEndDateTime}
+      />
+    );
+
+    const startInput = getByLabelText(/start/i);
+    const endInput = getByLabelText(/end/i);
+
+    fireEvent.change(startInput, { target: { value: '2023-07-01T12:00' } });
+    fireEvent.change(endInput, { target: { value: '2023-07-01T14:00' } });
+
+    expect(setStartDateTime).toHaveBeenCalledWith('2023-07-01T12:00');
+    expect(setEndDateTime).toHaveBeenCalledWith('2023-07-01T14:00');
+  });
+
+  test('submits the form and updates showRealTime', () => {
+    const { getByText } = render(
+      <DateTimeRangePicker
+        setShowRealTime={setShowRealTime}
+        startDateTime=""
+        setStartDateTime={setStartDateTime}
+        endDateTime=""
+        setEndDateTime={setEndDateTime}
+      />
+    );
+
+    fireEvent.click(getByText(/submit/i));
+
+    expect(setShowRealTime).toHaveBeenCalledWith(false);
+  });
+
+  test('resets the showRealTime state', () => {
+    const { getByText } = render(
+      <DateTimeRangePicker
+        setShowRealTime={setShowRealTime}
+        startDateTime=""
+        setStartDateTime={setStartDateTime}
+        endDateTime=""
+        setEndDateTime={setEndDateTime}
+      />
+    );
+
+    fireEvent.click(getByText(/reset/i));
+
+    expect(setShowRealTime).toHaveBeenCalledTimes(2);
+    expect(setShowRealTime).toHaveBeenCalledWith(false);
+    expect(setShowRealTime).toHaveBeenCalledWith(true);
+  });
+});
+```
+
+This code includes the following test cases:
+- **renders correctly**: Ensures that the component renders the start and end date-time inputs, the submit button, and the reset button.
+- **handles date time input changes**: Simulates changing the start and end date-time inputs and verifies that the corresponding state update functions (`setStartDateTime` and `setEndDateTime`) are called with the correct values.
+- **submits the form and updates showRealTime**: Simulates submitting the form and verifies that `setShowRealTime` is called with `false`.
+- **resets the showRealTime state**: Simulates clicking the reset button and verifies that `setShowRealTime` is called twice, first with `false` and then with `true`.
+
+Make sure you run these tests using Jest. You can add a script in your `package.json` file to run Jest:
+
+```json
+"scripts": {
+  "test": "jest"
+}
+```
+
+Then, you can run your tests using:
+
+```sh
+npm test
+```
+
+This setup ensures that your `DateTimeRangePicker` component behaves as expected.
+
+
+
+
+
+
+
 To write a Jest test case for the provided `Header3` component, we need to ensure the component is correctly formatted and then create the test case using React Testing Library.
 
 ### Cleaned Up `Header3` Component
