@@ -1,3 +1,101 @@
+To write a Jest test case for the provided `Header3` component, we need to ensure the component is correctly formatted and then create the test case using React Testing Library.
+
+### Cleaned Up `Header3` Component
+
+First, let's clean up and properly format the `Header3` component.
+
+#### `Header3.js`
+
+```javascript
+import React from 'react';
+import { Link } from "react-router-dom";
+import { Masthead, ThemeProvider } from "@wf-wfria/pioneer-core";
+
+function Header3() {
+  const [open, setOpen] = React.useState(false);
+
+  const openPanel = () => setOpen(true);
+  const closePanel = () => setOpen(false);
+
+  const onSubmit = (e, data) => {
+    window.alert("Form submitted");
+    console.log("Form submitted with: ", data);
+  };
+
+  return (
+    <ThemeProvider baseTheme='common'>
+      <Masthead
+        homeUrl="http://wellsfargo.com"
+        elementToFocusOnSkip="#main-content"
+      >
+        <Link to="/About" style={{ marginLeft: "5%", color: "white", fontSize: "20px", fontFamily: "Arial Sans" }}>
+          About
+        </Link>
+        <Link to="/Overview" style={{ marginLeft: "90%", color: "white", fontSize: "20px", fontFamily: "Arial Sans" }}>
+          Overview
+        </Link>
+        <Link to="/Component_page" style={{ marginLeft: "5%", color: "white", fontSize: "20px", fontFamily: "Arial Sans" }}>
+          Main
+        </Link>
+      </Masthead>
+    </ThemeProvider>
+  );
+}
+
+export default Header3;
+```
+
+### Jest Test Case
+
+Now, let's write a Jest test case for the `Header3` component using React Testing Library.
+
+#### `Header3.test.js`
+
+```javascript
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import Header3 from './Header3';
+import { BrowserRouter as Router } from 'react-router-dom';
+
+test('renders Header3 and checks links functionality', () => {
+  render(
+    <Router>
+      <Header3 />
+    </Router>
+  );
+
+  // Check if links are rendered and have correct href attributes
+  const aboutLink = screen.getByText('About').closest('a');
+  const overviewLink = screen.getByText('Overview').closest('a');
+  const mainLink = screen.getByText('Main').closest('a');
+
+  expect(aboutLink).toHaveAttribute('href', '/About');
+  expect(overviewLink).toHaveAttribute('href', '/Overview');
+  expect(mainLink).toHaveAttribute('href', '/Component_page');
+});
+```
+
+### Explanation
+
+1. **Render Component**: The `Header3` component is rendered using the `render` function from React Testing Library, wrapped in a `Router` since it uses `Link` from `react-router-dom`.
+2. **Check Links**: The test verifies that each link has the correct `href` attribute.
+
+### Running the Tests
+
+To run the tests, ensure you have Jest and React Testing Library set up in your project. You can run the tests using the following command:
+
+```bash
+npm test
+```
+
+This command will execute all test files and output the results, showing which tests passed and which failed.
+
+
+
+
+
+
 Let's start by cleaning up and properly formatting the `Header` component. Then, we'll write a Jest test case for it using React Testing Library.
 
 ### Cleaned Up `Header` Component
