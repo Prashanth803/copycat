@@ -1,3 +1,52 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import DateTimeRangePicker from './DateTimeRangePicker';
+
+test('renders DateTimeRangePicker and handles input and submission', () => {
+  const setShowRealTime = jest.fn();
+  const setStartDateTime = jest.fn();
+  const setEndDateTime = jest.fn();
+  const startDateTime = '2023-01-01T00:00';
+  const endDateTime = '2023-01-01T23:59';
+
+  render(
+    <DateTimeRangePicker
+      setShowRealTime={setShowRealTime}
+      startDateTime={startDateTime}
+      setStartDateTime={setStartDateTime}
+      endDateTime={endDateTime}
+      setEndDateTime={setEndDateTime}
+    />
+  );
+
+  // Check if inputs are rendered with initial values
+  expect(screen.getByLabelText(/Start:/i)).toHaveValue(startDateTime);
+  expect(screen.getByLabelText(/End:/i)).toHaveValue(endDateTime);
+
+  // Simulate changing the start date time
+  fireEvent.change(screen.getByLabelText(/Start:/i), { target: { value: '2023-01-02T00:00' } });
+  expect(setStartDateTime).toHaveBeenCalledWith('2023-01-02T00:00');
+
+  // Simulate changing the end date time
+  fireEvent.change(screen.getByLabelText(/End:/i), { target: { value: '2023-01-02T23:59' } });
+  expect(setEndDateTime).toHaveBeenCalledWith('2023-01-02T23:59');
+
+  // Simulate form submission
+  fireEvent.submit(screen.getByRole('form'));
+  expect(setShowRealTime).toHaveBeenCalledWith(false);
+
+  // Simulate reset button click
+  fireEvent.click(screen.getByText(/Reset/i));
+  expect(setShowRealTime).toHaveBeenCalledTimes(2);
+});
+
+
+
+
+
+
+
 To enable JSX transformation in your project using Babel, you need to add the `@babel/preset-react` to the `presets` section of your Babel configuration. If you only want to enable JSX parsing without transformation, you can use `@babel/plugin-syntax-jsx`.
 
 ### Step-by-Step Instructions
