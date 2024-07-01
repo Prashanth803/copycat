@@ -142,6 +142,153 @@ This test case ensures that the `DateTimeRangePicker` component renders correctl
 
 
 
+
+
+
+To test the `DateTimeRangePicker` component in Jest with React Testing Library, you need to verify that the component renders correctly, handles state changes, and submits the form. Here's how you can write a test case for it.
+
+### DateTimeRangePicker Component
+
+First, let's format and complete the component code properly:
+
+#### `DateTimeRangePicker.js`
+```javascript
+import React from 'react';
+
+const DateTimeRangePicker = ({ setShowRealTime, startDateTime, setStartDateTime, endDateTime, setEndDateTime }) => {
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setShowRealTime(false);
+  };
+
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    color: '#333',
+    fontFamily: "WF Sans Regular, arial, helvetica",
+    gap: "12px",
+  };
+
+  const inputStyle = {
+    margin: '10px 0',
+    padding: '10px',
+    borderRadius: '5px',
+    border: '1px solid #ccc',
+  };
+
+  const buttonStyle = {
+    padding: '10px 20px',
+    borderRadius: '5px',
+    border: 'none',
+    backgroundColor: '#d71e28',
+    color: '#fff',
+    cursor: 'pointer',
+  };
+
+  return (
+    <div className="main-body" style={{ marginTop: "0px" }}>
+      <form onSubmit={handleSubmit} style={containerStyle}>
+        <label>
+          Start:
+          <input
+            type="datetime-local"
+            value={startDateTime}
+            onChange={(e) => setStartDateTime(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+        <label>
+          End:
+          <input
+            type="datetime-local"
+            value={endDateTime}
+            onChange={(e) => setEndDateTime(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+        <button type="submit" style={buttonStyle}>Submit</button>
+        <button
+          type="button"
+          style={buttonStyle}
+          onClick={() => { setShowRealTime(false); setShowRealTime(true); }}
+        >
+          Reset
+        </button>
+      </form>
+    </div>
+  );
+};
+
+export default DateTimeRangePicker;
+```
+
+### Test Case with Jest and React Testing Library
+
+Now, let's write a test case for this component.
+
+#### `DateTimeRangePicker.test.js`
+```javascript
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import DateTimeRangePicker from './DateTimeRangePicker';
+
+test('renders DateTimeRangePicker and handles input and submission', () => {
+  const setShowRealTime = jest.fn();
+  const setStartDateTime = jest.fn();
+  const setEndDateTime = jest.fn();
+  const startDateTime = '2023-01-01T00:00';
+  const endDateTime = '2023-01-01T23:59';
+
+  render(
+    <DateTimeRangePicker
+      setShowRealTime={setShowRealTime}
+      startDateTime={startDateTime}
+      setStartDateTime={setStartDateTime}
+      endDateTime={endDateTime}
+      setEndDateTime={setEndDateTime}
+    />
+  );
+
+  // Check if inputs are rendered with initial values
+  expect(screen.getByLabelText(/Start:/i)).toHaveValue(startDateTime);
+  expect(screen.getByLabelText(/End:/i)).toHaveValue(endDateTime);
+
+  // Simulate changing the start date time
+  fireEvent.change(screen.getByLabelText(/Start:/i), { target: { value: '2023-01-02T00:00' } });
+  expect(setStartDateTime).toHaveBeenCalledWith('2023-01-02T00:00');
+
+  // Simulate changing the end date time
+  fireEvent.change(screen.getByLabelText(/End:/i), { target: { value: '2023-01-02T23:59' } });
+  expect(setEndDateTime).toHaveBeenCalledWith('2023-01-02T23:59');
+
+  // Simulate form submission
+  fireEvent.submit(screen.getByRole('form'));
+  expect(setShowRealTime).toHaveBeenCalledWith(false);
+
+  // Simulate reset button click
+  fireEvent.click(screen.getByText(/Reset/i));
+  expect(setShowRealTime).toHaveBeenCalledTimes(2);
+});
+```
+
+### Explanation
+
+1. **Mock Functions**: Use `jest.fn()` to create mock functions for `setShowRealTime`, `setStartDateTime`, and `setEndDateTime`.
+2. **Render Component**: Use `render` to render the `DateTimeRangePicker` component with mock props.
+3. **Initial Value Checks**: Verify that the input elements are rendered with the correct initial values using `screen.getByLabelText` and `expect`.
+4. **Simulate Input Change**: Use `fireEvent.change` to simulate changing the input values and verify that the appropriate mock functions are called with the correct arguments.
+5. **Simulate Form Submission**: Use `fireEvent.submit` to simulate form submission and verify that `setShowRealTime` is called correctly.
+6. **Simulate Reset Button Click**: Use `fireEvent.click` to simulate clicking the reset button and verify that `setShowRealTime` is called correctly again.
+
+This test case ensures that the `DateTimeRangePicker` component renders correctly, handles state changes, and submits the form as expected.
+
+
+
+
+
+
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
