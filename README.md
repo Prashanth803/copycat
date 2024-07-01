@@ -41,65 +41,17 @@ test('renders DateTimeRangePicker and handles input and submission', () => {
   expect(setShowRealTime).toHaveBeenCalledTimes(2);
 });
 
-
-
-
-
-
-
-To enable JSX transformation in your project using Babel, you need to add the `@babel/preset-react` to the `presets` section of your Babel configuration. If you only want to enable JSX parsing without transformation, you can use `@babel/plugin-syntax-jsx`.
-
-### Step-by-Step Instructions
-
-#### Step 1: Install Required Packages
-
-First, ensure you have Babel and the necessary packages installed.
-
-```bash
-npm install --save-dev @babel/core @babel/preset-env @babel/preset-react
-```
-
-If you also want to enable JSX parsing without transformation, install the syntax plugin:
-
-```bash
-npm install --save-dev @babel/plugin-syntax-jsx
-```
-
-#### Step 2: Configure Babel
-
-Create a `.babelrc` file (or update your existing Babel configuration) in the root of your project.
-
-##### Example with `@babel/preset-react`:
-
-This setup will enable JSX transformation, which is the most common use case when working with React.
-
-```json
-{
-  "presets": [
-    "@babel/preset-env",
-    "@babel/preset-react"
-  ]
-}
-```
-
-##### Example with `@babel/plugin-syntax-jsx`:
-
-This setup will only enable JSX parsing without transformation.
-
-```json
-{
-  "presets": [
-    "@babel/preset-env"
-  ],
-  "plugins": [
-    "@babel/plugin-syntax-jsx"
-  ]
-}
-```
-
-### Explanation
-
-1. **`@babel/preset-env`**: This preset allows you to use the latest JavaScript features by automatically determining the Babel plugins and polyfills you need based on your targeted environments.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ plugins and polyfills you need based on your targeted environments.
 2. **`@babel/preset-react`**: This preset is specifically designed for transforming React JSX syntax into JavaScript.
 3. **`@babel/plugin-syntax-jsx`**: This plugin allows Babel to parse JSX syntax but doesn't transform it. This is useful if you are using a different tool for the actual transformation or if you only need to parse JSX for some reason.
 
