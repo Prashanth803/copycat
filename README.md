@@ -1,3 +1,6 @@
+Here’s your form converted into a **React component** using functional components and React state for controlled inputs.  
+
+```jsx
 import { useState } from "react";
 
 const FormComponent = () => {
@@ -85,7 +88,17 @@ const FormComponent = () => {
 };
 
 export default FormComponent;
+```
 
+---
+
+### **Key Improvements**
+✅ **Controlled Components:** Uses React `useState` to manage form inputs.  
+✅ **Dynamic Handling:** Supports both single and multiple select elements.  
+✅ **Form Submission:** Prevents page reload and logs the form data.  
+✅ **Bootstrap Styling:** Uses Bootstrap classes for better UI (ensure Bootstrap is included in your project).  
+
+Would you like to integrate this with an API or use `Formik` for validation? 😊
 
 
 
