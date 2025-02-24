@@ -1,3 +1,95 @@
+import { useState } from "react";
+
+const FormComponent = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    select: "1",
+    multiSelect: [],
+    textarea: "",
+  });
+
+  const handleChange = (e) => {
+    const { id, value, type, selectedOptions } = e.target;
+    
+    if (type === "select-multiple") {
+      const values = Array.from(selectedOptions, (option) => option.value);
+      setFormData({ ...formData, [id]: values });
+    } else {
+      setFormData({ ...formData, [id]: value });
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Form Data:", formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="p-4 border rounded">
+      <div className="mb-3">
+        <label htmlFor="email" className="form-label">Email address</label>
+        <input
+          type="email"
+          className="form-control"
+          id="email"
+          placeholder="name@example.com"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="select" className="form-label">Example select</label>
+        <select
+          className="form-control"
+          id="select"
+          value={formData.select}
+          onChange={handleChange}
+        >
+          {[1, 2, 3, 4, 5].map((num) => (
+            <option key={num} value={num}>{num}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="multiSelect" className="form-label">Example multiple select</label>
+        <select
+          multiple
+          className="form-control"
+          id="multiSelect"
+          value={formData.multiSelect}
+          onChange={handleChange}
+        >
+          {[1, 2, 3, 4, 5].map((num) => (
+            <option key={num} value={num}>{num}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="textarea" className="form-label">Example textarea</label>
+        <textarea
+          className="form-control"
+          id="textarea"
+          rows="3"
+          value={formData.textarea}
+          onChange={handleChange}
+        ></textarea>
+      </div>
+
+      <button type="submit" className="btn btn-primary">Submit</button>
+    </form>
+  );
+};
+
+export default FormComponent;
+
+
+
+
+
 ### **Docker vs. Kubernetes: Understanding the Differences and Why Use Both**  
 
 #### **What is Docker?**  
