@@ -1,3 +1,29 @@
+import React, { useState } from "react";
+import FormComponent from "./FormComponent"; // Import the form component
+
+const App = () => {
+  const [showForm, setShowForm] = useState(false);
+
+  return (
+    <div className="container">
+      <h1>Welcome to My App</h1>
+      {!showForm ? (
+        <button className="btn btn-success" onClick={() => setShowForm(true)}>
+          Open Form
+        </button>
+      ) : (
+        <FormComponent onClose={() => setShowForm(false)} />
+      )}
+    </div>
+  );
+};
+
+export default App;
+
+
+
+
+
 Here’s your form converted into a **React component** using functional components and React state for controlled inputs.  
 
 ```jsx
