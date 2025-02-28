@@ -1,3 +1,119 @@
+### **📌 When to Use `@Configuration`, `@Service`, `@Component`, and `@Qualifier` in Spring Boot?**  
+
+These annotations are part of Spring's **Dependency Injection (DI)** mechanism and help manage beans in the Spring container.
+
+---
+
+## **1️⃣ `@Configuration`**  
+Used when defining a **class that provides bean definitions**.  
+
+🔹 **When to Use?**  
+- When you need to create and configure beans manually.
+- When using `@Bean` methods inside a class.
+
+🔹 **Example:**
+```java
+@Configuration
+public class AppConfig {
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+🛠 **This is an alternative to XML-based configuration.**
+
+---
+
+## **2️⃣ `@Service`**  
+Used to mark a **service class** that contains business logic.  
+
+🔹 **When to Use?**  
+- When writing **business logic** or **service layer** components.
+
+🔹 **Example:**
+```java
+@Service
+public class UserService {
+    public String getUser() {
+        return "Lisa";
+    }
+}
+```
+🛠 **This tells Spring that `UserService` is a service component.**
+
+---
+
+## **3️⃣ `@Component`**  
+A generic annotation that marks a class as a **Spring-managed component**.
+
+🔹 **When to Use?**  
+- When no specific stereotype (`@Service`, `@Repository`, `@Controller`) fits.
+- For general utility classes.
+
+🔹 **Example:**
+```java
+@Component
+public class UtilityClass {
+    public String formatText(String text) {
+        return text.toUpperCase();
+    }
+}
+```
+🛠 **Spring automatically scans and registers this as a bean.**
+
+---
+
+## **4️⃣ `@Qualifier`**  
+Used to **resolve conflicts when multiple beans** of the same type exist.  
+
+🔹 **When to Use?**  
+- When **two or more beans of the same type** exist and you need to **specify which one to inject**.
+
+🔹 **Example:**
+```java
+@Component("beanOne")
+public class BeanOne {
+    public String message() {
+        return "Bean One";
+    }
+}
+
+@Component("beanTwo")
+public class BeanTwo {
+    public String message() {
+        return "Bean Two";
+    }
+}
+
+@Service
+public class ExampleService {
+    private final BeanOne bean;
+
+    @Autowired
+    public ExampleService(@Qualifier("beanOne") BeanOne bean) {
+        this.bean = bean;
+    }
+}
+```
+🛠 **This ensures `beanOne` is injected instead of `beanTwo`.**
+
+---
+
+### **🌟 Summary: When to Use Which?**
+| Annotation       | Purpose |
+|-----------------|---------|
+| `@Configuration` | Define beans manually inside a configuration class. |
+| `@Service` | Mark a service class containing business logic. |
+| `@Component` | Generic annotation for any Spring-managed component. |
+| `@Qualifier` | Specify which bean to inject when multiple exist. |
+
+🚀 **Use `@Configuration` for defining beans, `@Service` for business logic, `@Component` for general beans, and `@Qualifier` to resolve conflicts in DI.**
+
+
+
+
 ### **🛠 Understanding `HttpEntity` in Spring Boot**  
 
 `HttpEntity<T>` in Spring Boot represents an HTTP request or response, including **headers and body**. It's useful when you need to send **custom headers** along with the request.  
