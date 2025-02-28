@@ -1,3 +1,111 @@
+### **📌 `@Data`, `@NestedConfigurationProperty`, and `@ConfigurationProperties` in Spring Boot**  
+
+These annotations are primarily used in **Spring Boot Configuration** to manage and bind properties effectively.
+
+---
+
+## **1️⃣ `@Data` (Lombok Annotation)**
+✅ **Purpose**:  
+- **Automatically generates** boilerplate code like **getters, setters, `toString()`, `equals()`, `hashCode()`**.  
+- Reduces verbosity in Java classes.
+
+✅ **When to Use?**  
+- In **POJOs or DTOs** that require getter/setter methods.
+- In configuration classes when combined with `@ConfigurationProperties`.
+
+✅ **Example:**
+```java
+import lombok.Data;
+
+@Data  // Generates getters, setters, toString, equals, and hashCode
+public class User {
+    private String name;
+    private int age;
+}
+```
+---
+## **2️⃣ `@ConfigurationProperties`**
+✅ **Purpose**:  
+- Binds **external properties** from `application.properties` or `application.yml` to a **POJO (Plain Old Java Object)**.  
+- Supports **type-safe configuration**.
+
+✅ **When to Use?**  
+- When **mapping multiple related properties** to a class.
+
+✅ **Example (`application.yml`):**
+```yaml
+app:
+  name: MyApp
+  version: 1.0
+```
+✅ **Java Class with `@ConfigurationProperties`:**
+```java
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+import lombok.Data;
+
+@Data
+@Component
+@ConfigurationProperties(prefix = "app")
+public class AppConfig {
+    private String name;
+    private String version;
+}
+```
+📌 **Now, `AppConfig` will automatically load values from `application.yml`**.
+
+---
+## **3️⃣ `@NestedConfigurationProperty`**
+✅ **Purpose**:  
+- Used **inside `@ConfigurationProperties` classes** to group related nested properties **without creating a separate prefix**.
+
+✅ **When to Use?**  
+- When you **have a nested property structure** inside a configuration class.
+
+✅ **Example (`application.yml`):**
+```yaml
+app:
+  name: MyApp
+  version: 1.0
+  database:
+    url: jdbc:mysql://localhost:3306/mydb
+    username: root
+    password: secret
+```
+✅ **Java Class:**
+```java
+@Data
+@ConfigurationProperties(prefix = "app")
+@Component
+public class AppConfig {
+    private String name;
+    private String version;
+
+    @NestedConfigurationProperty
+    private DatabaseConfig database;
+}
+
+@Data
+public class DatabaseConfig {
+    private String url;
+    private String username;
+    private String password;
+}
+```
+📌 **Now, `DatabaseConfig` will be automatically injected into `AppConfig.database` without needing a separate prefix.**
+
+---
+
+### **🌟 Summary: When to Use Which?**
+| Annotation                  | Purpose |
+|-----------------------------|---------|
+| `@Data`                     | Lombok annotation to auto-generate getters, setters, `toString()`, etc. |
+| `@ConfigurationProperties`  | Maps external properties (`.yml` or `.properties`) to a POJO. |
+| `@NestedConfigurationProperty` | Used inside `@ConfigurationProperties` classes to manage nested properties. |
+
+🚀 **Use `@ConfigurationProperties` for mapping properties, `@NestedConfigurationProperty` for nested objects, and `@Data` for reducing boilerplate code!**
+
+
 ### **📌 When to Use `@Configuration`, `@Service`, `@Component`, and `@Qualifier` in Spring Boot?**  
 
 These annotations are part of Spring's **Dependency Injection (DI)** mechanism and help manage beans in the Spring container.
