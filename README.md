@@ -1,3 +1,100 @@
+### **🛠 Understanding `HttpEntity` in Spring Boot**  
+
+`HttpEntity<T>` in Spring Boot represents an HTTP request or response, including **headers and body**. It's useful when you need to send **custom headers** along with the request.  
+
+---
+
+## **📌 Key Components of `HttpEntity`**
+- **Headers**: Meta-information like Content-Type, Authorization, etc.
+- **Body**: The actual data being sent.
+
+`HttpEntity<T>` is typically used with `RestTemplate` but can also be used in `WebClient`.
+
+---
+
+## **🔹 Creating an `HttpEntity`**
+### **1️⃣ Sending a Request with Headers & Body**
+```java
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+@Service
+public class ApiService {
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    public ResponseEntity<String> sendRequest() {
+        String url = "https://jsonplaceholder.typicode.com/posts";
+
+        // Create Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer my_token");
+        headers.set("Content-Type", "application/json");
+
+        // Create Request Body
+        String body = "{ \"title\": \"New Post\", \"body\": \"This is a post\", \"userId\": 1 }";
+
+        // Create HttpEntity with Headers and Body
+        HttpEntity<String> requestEntity = new HttpEntity<>(body, headers);
+
+        // Send POST request
+        return restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+    }
+}
+```
+
+✅ **Explanation**:
+- `HttpHeaders headers = new HttpHeaders();` → Creates custom headers.
+- `HttpEntity<String> requestEntity = new HttpEntity<>(body, headers);` → Combines headers and body.
+- `restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);` → Sends the request.
+
+---
+
+## **🔹 Receiving a Response with `HttpEntity`**
+```java
+public void getRequest() {
+    String url = "https://jsonplaceholder.typicode.com/posts/1";
+
+    // Make GET request and receive response
+    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity.EMPTY, String.class);
+
+    System.out.println("Response: " + response.getBody());
+}
+```
+- `HttpEntity.EMPTY` means no body is sent.
+- The response is wrapped in `ResponseEntity<T>`.
+
+---
+
+## **🔹 Handling Custom Headers in Response**
+```java
+public void getWithHeaders() {
+    String url = "https://jsonplaceholder.typicode.com/posts/1";
+
+    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity.EMPTY, String.class);
+    
+    System.out.println("Headers: " + response.getHeaders());
+    System.out.println("Body: " + response.getBody());
+}
+```
+
+---
+
+## **🌟 Summary**
+| Feature       | `HttpEntity<T>` |
+|--------------|----------------|
+| **Purpose**  | Send/Receive HTTP request & response with headers |
+| **Use With** | `RestTemplate` (mostly) |
+| **Includes** | HTTP Headers + Body |
+| **Alternatives** | `RequestEntity<T>`, `ResponseEntity<T>` |
+
+Would you like an example using **`WebClient`** instead of `RestTemplate`? 🚀
+
+
+
 ### **Difference Between `@RestControllerAdvice` and `@RestController` in Spring Boot**
 
 Both annotations are used in **Spring Boot's REST API development**, but they serve different purposes.
