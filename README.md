@@ -1,3 +1,203 @@
+In Spring Boot (with JPA and Hibernate), **relationships** between entities are defined using annotations such as `@OneToMany`, `@ManyToOne`, `@OneToOne`, and `@ManyToMany`. These annotations help map Java objects to relational database tables. Below are explanations and syntax for each:
+
+---
+
+## **1. @OneToOne (One-to-One Relationship)**
+This annotation represents a **one-to-one** relationship between two entities.  
+
+**Example:**
+- A **User** has exactly **one Address**.
+
+```java
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "address_id", referencedColumnName = "id")
+    private Address address;
+    
+    // Getters and Setters
+}
+```
+
+```java
+@Entity
+public class Address {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String city;
+    
+    @OneToOne(mappedBy = "address")
+    private User user;
+}
+```
+
+**Explanation:**
+- `@OneToOne`: Defines a one-to-one relationship.
+- `@JoinColumn(name = "address_id")`: Specifies the foreign key column.
+- `mappedBy = "address"`: Means `User` owns the relationship.
+
+---
+
+## **2. @OneToMany (One-to-Many Relationship)**
+One entity **has multiple** related entities.  
+
+**Example:**
+- A **Department** has multiple **Employees**.
+
+```java
+@Entity
+public class Department {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Employee> employees = new ArrayList<>();
+}
+```
+
+```java
+@Entity
+public class Employee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id", nullable = false)
+    private Department department;
+}
+```
+
+**Explanation:**
+- `@OneToMany(mappedBy = "department")`: Specifies that `Department` owns the relationship.
+- `@ManyToOne`: Defines the many-to-one side.
+- `@JoinColumn(name = "department_id")`: Specifies the foreign key column.
+- `cascade = CascadeType.ALL`: If a department is deleted, its employees are deleted.
+- `orphanRemoval = true`: Removes employees if they are removed from the list.
+
+---
+
+## **3. @ManyToOne (Many-to-One Relationship)**
+This is the **inverse** of `@OneToMany`, meaning multiple entities are related to one.
+
+**Example:**
+- Multiple **Employees** belong to **one Department**.
+
+```java
+@Entity
+public class Employee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id", nullable = false)
+    private Department department;
+}
+```
+
+**Explanation:**
+- `@ManyToOne`: Many `Employee` entities belong to one `Department`.
+- `@JoinColumn(name = "department_id")`: Foreign key in the `Employee` table.
+
+---
+
+## **4. @ManyToMany (Many-to-Many Relationship)**
+When both sides have multiple relationships.
+
+**Example:**
+- A **Student** can enroll in **multiple Courses**, and a **Course** can have multiple **Students**.
+
+```java
+@Entity
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+
+    @ManyToMany
+    @JoinTable(
+        name = "student_course",
+        joinColumns = @JoinColumn(name = "student_id"),
+        inverseJoinColumns = @JoinColumn(name = "course_id")
+    )
+    private List<Course> courses = new ArrayList<>();
+}
+```
+
+```java
+@Entity
+public class Course {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String title;
+
+    @ManyToMany(mappedBy = "courses")
+    private List<Student> students = new ArrayList<>();
+}
+```
+
+**Explanation:**
+- `@ManyToMany`: Many students can be in many courses.
+- `@JoinTable`: Creates a **junction table (`student_course`)** to manage the relationship.
+- `joinColumns`: References `student_id`.
+- `inverseJoinColumns`: References `course_id`.
+- `mappedBy = "courses"`: Means `Student` owns the relationship.
+
+---
+
+## **Cascade Types in Relationships**
+JPA allows cascading operations (`CascadeType`) to propagate changes automatically:
+- `ALL`: Applies all operations (persist, merge, remove, etc.).
+- `PERSIST`: Saves the child entity when the parent is saved.
+- `MERGE`: Merges the child when the parent is merged.
+- `REMOVE`: Deletes the child when the parent is deleted.
+- `REFRESH`: Reloads child entities when the parent is refreshed.
+- `DETACH`: Detaches the child when the parent is detached.
+
+**Example of Cascading:**
+```java
+@OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
+private List<Employee> employees;
+```
+
+---
+
+## **Fetch Types**
+Defines how child entities are loaded:
+- `EAGER`: Loads related entities immediately (default for `@OneToOne` and `@ManyToOne`).
+- `LAZY`: Loads related entities only when accessed (default for `@OneToMany` and `@ManyToMany`).
+
+**Example of Lazy Loading:**
+```java
+@OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+private List<Employee> employees;
+```
+
+---
+
+### **Summary Table**
+
+| Relationship  | Annotation | Example |
+|--------------|------------|---------|
+| One-to-One   | `@OneToOne` | A User has one Address |
+| One-to-Many  | `@OneToMany` | A Department has many Employees |
+| Many-to-One  | `@ManyToOne` | Many Employees belong to one Department |
+| Many-to-Many | `@ManyToMany` | A Student can enroll in many Courses |
+
+---
+
+These annotations help in defining relationships between entities efficiently in Spring Boot. Let me know if you need more details!
+
 ### **📌 `@Data`, `@NestedConfigurationProperty`, and `@ConfigurationProperties` in Spring Boot**  
 
 These annotations are primarily used in **Spring Boot Configuration** to manage and bind properties effectively.
