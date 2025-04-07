@@ -1,3 +1,78 @@
+Good catch! The infinite loop issue is likely due to the remaining amount being **too small** to generate a valid `invoiceAmount > 0.01`, especially in the later iterations.
+
+### Here’s a **more robust alternative approach**:
+Instead of using a `do-while` loop to generate valid invoice amounts, we'll **pre-calculate a safe minimum amount for each invoice** and distribute the total accordingly.
+
+### Updated Approach:
+
+```java
+public List<Map<String, Object>> paymentInfo(int invoice, double amount) {
+    List<Map<String, Object>> paymentList = new ArrayList<>();
+    SecureRandom random = new SecureRandom();
+
+    double remainingAmount = amount;
+    int numberOfPayments = (invoice == 0) ? 1 + random.nextInt(5) : invoice;
+
+    // Ensure minimum value of 0.01 for each invoice
+    double minPerInvoice = 0.01;
+    if (amount < minPerInvoice * numberOfPayments) {
+        throw new IllegalArgumentException("Amount too low to divide among payments.");
+    }
+
+    // Generate random weight factors to proportionally split the amount
+    double[] weights = new double[numberOfPayments];
+    double weightSum = 0;
+    for (int i = 0; i < numberOfPayments; i++) {
+        weights[i] = 1 + random.nextDouble(); // at least 1 to prevent zero division
+        weightSum += weights[i];
+    }
+
+    for (int i = 0; i < numberOfPayments; i++) {
+        Map<String, Object> payment = new HashMap<>();
+
+        String facilityName = "fcl" + (random.nextInt(900) + 100);
+        String invoiceNumber = String.valueOf(random.nextInt(10000));
+        String purchaseOrderNumber = "po" + (random.nextInt(1000));
+        String description = "desc" + random.nextInt(100);
+
+        double invoiceAmount;
+        if (i == numberOfPayments - 1) {
+            // Last one gets the remaining
+            invoiceAmount = Math.round(remainingAmount * 100.0) / 100.0;
+        } else {
+            invoiceAmount = Math.round((weights[i] / weightSum * amount) * 100.0) / 100.0;
+            remainingAmount -= invoiceAmount;
+        }
+
+        // Ensure amount is at least 0.01
+        if (invoiceAmount < minPerInvoice) invoiceAmount = minPerInvoice;
+
+        payment.put("facilityName", facilityName);
+        payment.put("invoiceNumber", invoiceNumber);
+        payment.put("purchaseOrderNumber", purchaseOrderNumber);
+        payment.put("invoiceAmount", invoiceAmount);
+        payment.put("discountAmount", 0);
+        payment.put("description", description);
+
+        paymentList.add(payment);
+    }
+
+    return paymentList;
+}
+```
+
+### Key Improvements:
+- No infinite loop.
+- Uses **random weights** to split the amount.
+- Ensures **each invoice amount is above 0.01**.
+- Last item receives the remainder to ensure total sum consistency.
+
+Let me know if you'd like the output to always total exactly the given amount (e.g., rounded total adjustment logic).
+
+
+
+
+
 Absolutely! Let’s break down what you want:
 
 ### 📝 Requirements Recap:
