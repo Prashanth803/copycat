@@ -1,173 +1,108 @@
-Good catch! The infinite loop issue is likely due to the remaining amount being **too small** to generate a valid `invoiceAmount > 0.01`, especially in the later iterations.
-
-### Here’s a **more robust alternative approach**:
-Instead of using a `do-while` loop to generate valid invoice amounts, we'll **pre-calculate a safe minimum amount for each invoice** and distribute the total accordingly.
-
-### Updated Approach:
-
-```java
-public List<Map<String, Object>> paymentInfo(int invoice, double amount) {
-    List<Map<String, Object>> paymentList = new ArrayList<>();
-    SecureRandom random = new SecureRandom();
-
-    double remainingAmount = amount;
-    int numberOfPayments = (invoice == 0) ? 1 + random.nextInt(5) : invoice;
-
-    // Ensure minimum value of 0.01 for each invoice
-    double minPerInvoice = 0.01;
-    if (amount < minPerInvoice * numberOfPayments) {
-        throw new IllegalArgumentException("Amount too low to divide among payments.");
-    }
-
-    // Generate random weight factors to proportionally split the amount
-    double[] weights = new double[numberOfPayments];
-    double weightSum = 0;
-    for (int i = 0; i < numberOfPayments; i++) {
-        weights[i] = 1 + random.nextDouble(); // at least 1 to prevent zero division
-        weightSum += weights[i];
-    }
-
-    for (int i = 0; i < numberOfPayments; i++) {
-        Map<String, Object> payment = new HashMap<>();
-
-        String facilityName = "fcl" + (random.nextInt(900) + 100);
-        String invoiceNumber = String.valueOf(random.nextInt(10000));
-        String purchaseOrderNumber = "po" + (random.nextInt(1000));
-        String description = "desc" + random.nextInt(100);
-
-        double invoiceAmount;
-        if (i == numberOfPayments - 1) {
-            // Last one gets the remaining
-            invoiceAmount = Math.round(remainingAmount * 100.0) / 100.0;
-        } else {
-            invoiceAmount = Math.round((weights[i] / weightSum * amount) * 100.0) / 100.0;
-            remainingAmount -= invoiceAmount;
-        }
-
-        // Ensure amount is at least 0.01
-        if (invoiceAmount < minPerInvoice) invoiceAmount = minPerInvoice;
-
-        payment.put("facilityName", facilityName);
-        payment.put("invoiceNumber", invoiceNumber);
-        payment.put("purchaseOrderNumber", purchaseOrderNumber);
-        payment.put("invoiceAmount", invoiceAmount);
-        payment.put("discountAmount", 0);
-        payment.put("description", description);
-
-        paymentList.add(payment);
-    }
-
-    return paymentList;
-}
-```
-
-### Key Improvements:
-- No infinite loop.
-- Uses **random weights** to split the amount.
-- Ensures **each invoice amount is above 0.01**.
-- Last item receives the remainder to ensure total sum consistency.
-
-Let me know if you'd like the output to always total exactly the given amount (e.g., rounded total adjustment logic).
-
-
-
-
-
-Absolutely! Let’s break down what you want:
-
-### 📝 Requirements Recap:
-- A **global `totalAmount`** needs to be split across a **random number of payments (between 1 and 5)**.
-- Each **payment map** should include:
-  - Random `facilityName`, `invoiceNumber`, `purchaseOrderNumber`, and `description`
-  - A portion of the `invoiceAmount` (which together sums up to the `totalAmount`)
-  - `discountAmount` can be `0` (or randomized too if you want)
-- All maps are added under the `"paymentInformation"` key inside a main map.
+Great question! To fit these into BDD **feature files**, you organize them into separate or grouped `.feature` files based on related functionality. Here's how you can structure and write them in clean, modular BDD files using Gherkin syntax.
 
 ---
 
-### ✅ Here's the complete Java implementation:
-
-```java
-import java.util.*;
-import java.security.SecureRandom;
-
-public class RandomPaymentGenerator {
-    private static final SecureRandom random = new SecureRandom();
-
-    public static Map<String, List<Map<String, Object>>> generatePaymentInfo(double totalAmount) {
-        int numberOfPayments = 1 + random.nextInt(5); // 1 to 5
-        List<Map<String, Object>> paymentList = new ArrayList<>();
-
-        // Distribute totalAmount randomly but fairly
-        double remainingAmount = totalAmount;
-
-        for (int i = 0; i < numberOfPayments; i++) {
-            Map<String, Object> payment = new HashMap<>();
-
-            // Randomly generate fields
-            String facilityName = "fcl" + (random.nextInt(900) + 100); // fcl100 - fcl999
-            String invoiceNumber = String.valueOf(random.nextInt(10000)); // 0 - 9999
-            String purchaseOrderNumber = "po" + (random.nextInt(1000)); // po0 - po999
-            String description = "desc" + random.nextInt(100);
-
-            // Last payment takes the remaining to avoid rounding issues
-            double invoiceAmount;
-            if (i == numberOfPayments - 1) {
-                invoiceAmount = Math.round(remainingAmount * 100.0) / 100.0;
-            } else {
-                invoiceAmount = Math.round((random.nextDouble() * (remainingAmount / 2)) * 100.0) / 100.0;
-                remainingAmount -= invoiceAmount;
-            }
-
-            payment.put("facilityName", facilityName);
-            payment.put("invoiceNumber", invoiceNumber);
-            payment.put("purchaseOrderNumber", purchaseOrderNumber);
-            payment.put("invoiceAmount", invoiceAmount);
-            payment.put("discountAmount", 0);
-            payment.put("description", description);
-
-            paymentList.add(payment);
-        }
-
-        Map<String, List<Map<String, Object>>> paymentInfoWrapper = new HashMap<>();
-        paymentInfoWrapper.put("paymentInformation", paymentList);
-
-        return paymentInfoWrapper;
-    }
-
-    public static void main(String[] args) {
-        double globalAmount = 100.00;
-        Map<String, List<Map<String, Object>>> result = generatePaymentInfo(globalAmount);
-
-        // Pretty-print result
-        for (Map<String, Object> entry : result.get("paymentInformation")) {
-            System.out.println(entry);
-        }
-
-        // Optional: check total distributed
-        double total = result.get("paymentInformation").stream()
-                .mapToDouble(p -> (double) p.get("invoiceAmount"))
-                .sum();
-        System.out.println("Total distributed: " + total);
-    }
-}
+### ✅ **Folder Structure Suggestion**
+```
+features/
+│
+├── login/
+│   └── sign_on.feature
+│
+├── payment/
+│   ├── create_payment.feature
+│   └── review_and_submit.feature
+│
+└── utils/
+    └── email_dropdown_behavior.feature
 ```
 
 ---
 
-### 🧪 Example Output:
-```java
-{facilityName=fcl934, invoiceNumber=3821, purchaseOrderNumber=po567, invoiceAmount=34.12, discountAmount=0, description=desc55}
-{facilityName=fcl108, invoiceNumber=8120, purchaseOrderNumber=po75, invoiceAmount=21.77, discountAmount=0, description=desc10}
-{facilityName=fcl721, invoiceNumber=4261, purchaseOrderNumber=po200, invoiceAmount=44.11, discountAmount=0, description=desc77}
-Total distributed: 100.0
+### 🔐 **File: `sign_on.feature`**
+```gherkin
+Feature: User Sign On
+
+  Scenario: Successful Sign On and navigation
+    Given the user is on the Sign On page
+    And the Sign On page contains fields for Company, Username, and Password
+    When the user enters valid Company, Username, and Password
+    And the user clicks the Sign On button
+    Then the user should be navigated to the Create Options page
+    And a Create button should be visible
 ```
 
 ---
 
-Would you like to:
-- Include random `discountAmount`s too?
-- Serialize this to JSON for API use?
-- Save it to a file or database?
+### 💳 **File: `create_payment.feature`**
+```gherkin
+Feature: Payment Option Selection and Navigation
 
-Happy to build on it!
+  Scenario: Viewing Create Options
+    Given the user is on the Create Options page
+    When the user clicks the Create button
+    Then the user should see options: "Payment", "Payment with Template", and "File Upload"
+
+  Scenario: Navigating to Payment Page
+    Given the user selects the "Payment" option
+    When the page loads
+    Then the user should be prompted to enter a Passcode
+
+  Scenario: Validating Passcode and Navigating to Payment Creation
+    Given the user enters a valid Passcode
+    When the passcode is submitted
+    Then the user should be navigated to the Payment Creation page
+```
+
+---
+
+### 📧 **File: `email_dropdown_behavior.feature`**
+```gherkin
+Feature: Email Dropdown Behavior in Payment Form
+
+  Scenario: Email option is selected
+    Given the user is on the Payment Creation page
+    When the user selects "Email" from the Email dropdown
+    Then the adjacent Email input field should become active
+    And the user should enter a valid email address
+
+  Scenario: No Email option is selected
+    Given the user is on the Payment Creation page
+    When the user selects "No Email" from the Email dropdown
+    Then the Email input field should disappear
+```
+
+---
+
+### 🧾 **File: `review_and_submit.feature`**
+```gherkin
+Feature: Review and Submit Payment
+
+  Scenario: Reviewing Payment Details
+    Given all required fields are filled on the Payment Creation page
+    When the user clicks the Review button
+    Then a summary of all entered details should be displayed
+    And "Edit", "Cancel", and "Create" buttons should be visible
+
+  Scenario: Editing Payment Details
+    Given the user is on the Review page
+    When the user clicks the Edit button
+    Then the user should be redirected to the Payment Creation page
+    And all previously entered values should be retained
+
+  Scenario: Cancelling the Payment Creation
+    Given the user is on the Review page
+    When the user clicks the Cancel button
+    Then the user should be redirected to the Create Options page
+
+  Scenario: Creating Virtual Card
+    Given the user is on the Review page
+    When the user clicks the Create button
+    Then a virtual card should be created
+    And the user should be shown card details
+    And dropdown options should be viewable by clicking the dropdown icon
+```
+
+---
+
+Would you like me to help you scaffold these into a Cucumber or Behave (Python) project with matching step definitions?
