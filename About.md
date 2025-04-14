@@ -1,3 +1,149 @@
+For a **BDD-based web automation framework using Playwright**, the recommended file structure and configuration setup ensures scalability, maintainability, and easy integration with tools like **Cucumber** (or similar like `@cucumber/cucumber` for Node.js). Below is a comprehensive breakdown.
+
+---
+
+### **File Structure**
+```
+playwright-bdd-framework/
+│
+├── .env                          # Environment-specific variables
+├── package.json                  # NPM dependencies and scripts
+├── playwright.config.ts          # Playwright test configuration
+│
+├── configs/
+│   └── test.config.ts            # Custom test-level config (URLs, timeouts)
+│
+├── features/                     # BDD feature files
+│   ├── login.feature
+│   └── search.feature
+│
+├── step-definitions/            # Step definitions corresponding to feature files
+│   ├── login.steps.ts
+│   └── search.steps.ts
+│
+├── support/
+│   ├── hooks.ts                  # Before/After hooks
+│   ├── world.ts                  # Custom World for scenario context
+│   └── utils.ts                  # Common utility functions
+│
+├── pages/                        # Page Object Model files
+│   ├── BasePage.ts
+│   ├── LoginPage.ts
+│   └── SearchPage.ts
+│
+├── reports/                      # Test execution reports
+│
+└── tsconfig.json                 # TypeScript configuration
+```
+
+---
+
+### **Playwright Config (`playwright.config.ts`)**
+```ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  timeout: 30000,
+  retries: 1,
+  use: {
+    headless: true,
+    viewport: { width: 1280, height: 720 },
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    baseURL: process.env.BASE_URL || 'https://yourapp.com',
+  },
+});
+```
+
+---
+
+### **Custom Test Config (`configs/test.config.ts`)**
+```ts
+export const testConfig = {
+  baseURL: process.env.BASE_URL || 'https://yourapp.com',
+  timeout: 30000,
+  user: {
+    username: process.env.TEST_USER || 'test_user',
+    password: process.env.TEST_PASS || 'password123',
+  },
+};
+```
+
+---
+
+### **.env File**
+```env
+BASE_URL=https://yourapp.com
+TEST_USER=test_user
+TEST_PASS=password123
+```
+
+Load this via `dotenv`:
+```ts
+// e.g., in your hooks.ts
+import dotenv from 'dotenv';
+dotenv.config();
+```
+
+---
+
+### **Cucumber Integration (using @cucumber/cucumber)**
+
+Install dependencies:
+```bash
+npm install @cucumber/cucumber ts-node typescript dotenv --save-dev
+```
+
+Add to `package.json`:
+```json
+"scripts": {
+  "test:bdd": "cucumber-js --require-module ts-node/register --require step-definitions/**/*.ts features/**/*.feature"
+}
+```
+
+---
+
+### **Hooks Example (`support/hooks.ts`)**
+```ts
+import { Before, After } from '@cucumber/cucumber';
+import { Browser, chromium } from 'playwright';
+
+let browser: Browser;
+
+Before(async function () {
+  browser = await chromium.launch();
+  this.context = await browser.newContext();
+  this.page = await this.context.newPage();
+});
+
+After(async function () {
+  await this.page.close();
+  await this.context.close();
+  await browser.close();
+});
+```
+
+---
+
+### **World File (`support/world.ts`)**
+```ts
+import { setWorldConstructor, World } from '@cucumber/cucumber';
+import { BrowserContext, Page } from 'playwright';
+
+class CustomWorld extends World {
+  page!: Page;
+  context!: BrowserContext;
+}
+
+setWorldConstructor(CustomWorld);
+```
+
+---
+
+### Let me know if you’d like a working repo scaffold or examples for login or search test cases.
+
+
 The **Page Object Model (POM)** is a design pattern used in test automation to create an abstraction of the web pages or screens of your application. In **TypeScript-based automation frameworks** (like with **Playwright**, **Protractor**, or **WebdriverIO**), POM helps organize code and makes it **reusable, maintainable, and readable**.
 
 ---
