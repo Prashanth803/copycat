@@ -1,3 +1,69 @@
+Great follow-up, Lisa.
+
+In a **BDD setup with Playwright + Cucumber**, a file named `.feature.spec.js` **isn't standard or necessary**. But let's break it down based on what you might be seeing or thinking of:
+
+---
+
+### **What does a `.feature.spec.js` file imply?**
+
+A file like `login.feature.spec.js` sounds like it could be:
+- A **custom convention**, possibly combining BDD-style `.feature` logic with `.spec.js` structure.
+- A **Playwright-style test** referring to a `.feature` file manually (which is unusual and not standard).
+- A misunderstanding — **Playwright BDD doesn't need** `.feature.spec.js`.
+
+---
+
+### **So will `.feature.spec.js` help here?**
+
+#### **No — not unless you're doing something custom**.
+
+In a proper **CucumberJS + Playwright BDD setup**, the structure is:
+
+- **`.feature` file**: Describes test scenario in plain English.
+- **`.steps.js` file**: Implements logic for each step (Given/When/Then).
+- **Page Object files**: Hold reusable browser interaction logic.
+
+There’s **no `.spec.js` file involved** unless you’re using **standard Playwright tests**, which don’t rely on `.feature` files at all.
+
+---
+
+### **When could a `.feature.spec.js` help?**
+Only if:
+- You're trying to **unit test individual `.feature` steps** (which is rare).
+- You're blending Playwright’s `test()` function with Gherkin-style scenarios (advanced/custom setup).
+- You're writing **test coverage for steps themselves** (again, niche).
+
+---
+
+### ✅ Recommended Approach for BDD Playwright
+
+Stick to this structure:
+
+```
+features/
+  └── login.feature
+
+tests/step_definitions/
+  └── login.steps.js
+
+pages/
+  └── loginPage.js
+```
+
+That’s clean, scalable, and supported.
+
+---
+
+### TL;DR
+
+- `.feature.spec.js` is **not needed** in your Playwright BDD setup.
+- All step logic should live in `.steps.js`, mapped directly to `.feature` files.
+- If you're seeing `.feature.spec.js` in another repo, it's probably a custom convention or non-BDD usage.
+
+---
+
+Want me to show an example `.feature → .steps.js → pageObject.js` trace from your repo to make it 100% clear?
+
 Got it, Lisa! Let’s break this down step-by-step using the [Playwright-BDD-Automation repo](https://github.com/TestRoverAutomation/Playwright-BDD-Automation), so you can clearly see:
 
 1. **Where the tests are triggered**
