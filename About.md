@@ -1,3 +1,205 @@
+Got it, Lisa! Let’s break this down step-by-step using the [Playwright-BDD-Automation repo](https://github.com/TestRoverAutomation/Playwright-BDD-Automation), so you can clearly see:
+
+1. **Where the tests are triggered**
+2. **Where the test inputs come from**
+3. **How the data flows from `.feature` files to actual test logic**
+
+---
+
+### **1. Where are the tests triggered from?**
+
+Tests are triggered by Playwright’s test runner, but with **CucumberJS** integration.
+
+You can see the test script in **`package.json`**:
+
+```json
+"scripts": {
+  "test": "npx playwright test"
+}
+```
+
+This **actually runs the tests defined in the `.feature` files**, which are connected via step definitions.
+
+---
+
+### **2. Where are the tests written?**
+
+Tests (test cases) are written in **`features/*.feature`** files in **Gherkin syntax**, like this:
+
+```gherkin
+Scenario: Login with valid credentials
+  Given I launch the application
+  When I login with username "admin" and password "password123"
+  Then I should see the dashboard
+```
+
+These steps don’t do anything **yet** — they need to be connected to real code.
+
+---
+
+### **3. Where does the step logic live?**
+
+Each step is implemented in a corresponding **`.steps.js` file**, usually inside:
+
+```
+tests/step_definitions/
+```
+
+For example, a step like this in Gherkin:
+
+```gherkin
+When I login with username "admin" and password "password123"
+```
+
+Will be matched by code like:
+
+```js
+When('I login with username {string} and password {string}', async (username, password) => {
+  await loginPage.login(username, password);
+});
+```
+
+This is where your **data inputs** (`username`, `password`) are extracted and passed to real logic.
+
+---
+
+### **4. What happens inside the page object (`loginPage.login()`)?**
+
+That method is in `auth/loginPage.js` (or similar). It contains the actual Playwright commands:
+
+```js
+async login(username, password) {
+  await this.page.fill('#username', username);
+  await this.page.fill('#password', password);
+  await this.page.click('#loginButton');
+}
+```
+
+So the **data from the `.feature` file** ("admin", "password123") flows like this:
+
+```
+.feature file (test inputs)
+   ↓
+.step.js (step definitions extract strings from Gherkin)
+   ↓
+pageObject.js (functions that interact with the browser using Playwright)
+```
+
+---
+
+### **5. Summary of Test Flow**
+
+```
+Gherkin Test Case (.feature)
+  ↓
+Step Definitions (.steps.js)
+  ↓
+Page Object Methods (loginPage.js, etc.)
+  ↓
+Playwright Commands (fill, click, etc.)
+```
+
+### **Data Flow Example**
+
+From `.feature`:
+
+```gherkin
+When I login with username "admin" and password "password123"
+```
+
+To `.steps.js`:
+
+```js
+When('I login with username {string} and password {string}', async (username, password) => {
+  await loginPage.login(username, password);
+});
+```
+
+To `loginPage.js`:
+
+```js
+async login(username, password) {
+  await this.page.fill('#username', username);
+  await this.page.fill('#password', password);
+}
+```
+
+---
+
+Let me know if you want me to trace a **specific test scenario**, or you want help running the project locally!
+Great question, Lisa — this one trips up a lot of people new to BDD with Playwright!
+
+Let’s clear this up:
+
+---
+
+### **What are `.spec.js` files doing in this setup?**
+
+In a **BDD-style Playwright setup with Cucumber**, the test logic **usually lives in `.steps.js` files**, not `.spec.js`.
+
+However, **if you’re seeing `.spec.js` files**, there are two possibilities:
+
+#### 1. **Standard Playwright Tests (non-BDD)**:
+In vanilla Playwright, tests are written in `.spec.js` (or `.spec.ts`) like:
+
+```js
+test('Login works', async ({ page }) => {
+  await page.goto('https://site.com');
+  await page.fill('#user', 'admin');
+  await page.fill('#pass', 'password');
+  await page.click('#login');
+  await expect(page).toHaveURL('/dashboard');
+});
+```
+
+These are **not connected to `.feature` files**. They are standalone functional tests.
+
+#### 2. **Spec files calling feature files indirectly**:
+Sometimes `.spec.js` files might:
+- Import Cucumber setup
+- Register steps
+- Load feature files
+But this is rare — in your repo, it looks like the main structure uses **`.feature` + `.steps.js`** — so `.spec.js` may just be **vanilla Playwright leftovers** or **used for custom flows outside of Gherkin**.
+
+---
+
+### **So how are `.spec.js` and `.feature` files connected?**
+
+**They usually aren’t.** You typically choose one of two testing styles:
+
+| Style | Uses `.feature`? | Uses `.spec.js`? | Step Logic Location |
+|-------|------------------|------------------|----------------------|
+| **BDD** (Cucumber) | ✅ Yes | ❌ Not needed | In `.steps.js` |
+| **Standard Playwright** | ❌ No | ✅ Yes | Directly inside `.spec.js` |
+
+---
+
+### **How to tell what your project is using?**
+
+In your [repo](https://github.com/TestRoverAutomation/Playwright-BDD-Automation):
+
+- Tests are defined in `features/` (like `login.feature`)
+- Steps are implemented in `tests/step_definitions/*.steps.js`
+- That means this is a **pure BDD Playwright project** — and `.spec.js` files (if present) are probably:
+  - Legacy
+  - For non-BDD experiments
+  - Or just misnamed
+
+---
+
+### Want to clean it up?
+
+If you're going full BDD:
+- Stick to `.feature` + `.steps.js`
+- Delete unused `.spec.js` files
+
+If you want to mix both BDD and vanilla, that’s possible too — just need to configure the test runner accordingly.
+
+---
+
+Let me know if you want to trace a `.spec.js` file you’re unsure about and I can walk through it with you!
+
+
 For a **BDD-based web automation framework using Playwright**, the recommended file structure and configuration setup ensures scalability, maintainability, and easy integration with tools like **Cucumber** (or similar like `@cucumber/cucumber` for Node.js). Below is a comprehensive breakdown.
 
 ---
