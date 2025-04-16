@@ -1,3 +1,109 @@
+Great question! In Playwright with BDD-style tests (e.g., using Cucumber.js), when you're dealing with **multiple feature files**, and **the second one depends on the outcome of the first (e.g., logon)**, you'll need to **share state between the step definitions**. This includes things like the `page` object and possibly login session state.
+
+Here’s how to handle this:
+
+---
+
+### **1. Use a Global `World` Object (Cucumber’s Custom World)**
+Cucumber allows you to define a custom `World` where you can store shared context like the Playwright `page` object, user credentials, or session cookies.
+
+#### **world.js**
+```js
+const { setWorldConstructor } = require('@cucumber/cucumber');
+
+class CustomWorld {
+  constructor() {
+    this.page = null;  // shared page instance
+    this.context = null;  // shared browser context if needed
+  }
+}
+
+setWorldConstructor(CustomWorld);
+```
+
+---
+
+### **2. logon.steps.js (for logon.feature)**
+
+```js
+const { Given } = require('@cucumber/cucumber');
+const { chromium } = require('@playwright/test');
+
+Given('the user is logged in', async function () {
+  const browser = await chromium.launch();
+  this.context = await browser.newContext();
+  this.page = await this.context.newPage();
+  await this.page.goto('https://your-app.com/login');
+
+  await this.page.fill('#username', 'myuser');
+  await this.page.fill('#password', 'mypassword');
+  await this.page.click('#login-button');
+
+  // Wait for some post-login element
+  await this.page.waitForSelector('#dashboard');
+});
+```
+
+---
+
+### **3. continuation.steps.js (for continuation.feature)**
+
+Now you can continue using `this.page` that was initialized in the login steps:
+
+```js
+const { When, Then } = require('@cucumber/cucumber');
+
+When('the user navigates to the profile page', async function () {
+  // `this.page` is already logged in
+  await this.page.click('a[href="/profile"]');
+});
+
+Then('the user sees their profile details', async function () {
+  await this.page.waitForSelector('#profile-name');
+});
+```
+
+---
+
+### **4. Maintaining Context Between Scenarios**
+If your `logon.feature` and `continuation.feature` are **different scenarios** (and not part of the same one), then:
+
+- You **can’t share state** directly between them.
+- Instead, use `Before()` hooks to do login as a precondition for scenarios that need it.
+
+#### Example: `support/hooks.js`
+
+```js
+const { Before } = require('@cucumber/cucumber');
+const { chromium } = require('@playwright/test');
+
+Before({ tags: "@loggedIn" }, async function () {
+  const browser = await chromium.launch();
+  this.context = await browser.newContext();
+  this.page = await this.context.newPage();
+
+  await this.page.goto('https://your-app.com/login');
+  await this.page.fill('#username', 'myuser');
+  await this.page.fill('#password', 'mypassword');
+  await this.page.click('#login-button');
+  await this.page.waitForSelector('#dashboard');
+});
+```
+
+Then in `continuation.feature`, use the tag:
+
+```gherkin
+@loggedIn
+Scenario: User visits profile page
+  When the user navigates to the profile page
+  Then the user sees their profile details
+```
+
+---
+
+Would you like me to help scaffold a working folder structure for this or review your actual files?
+
+
 In Spring Boot (with JPA and Hibernate), **relationships** between entities are defined using annotations such as `@OneToMany`, `@ManyToOne`, `@OneToOne`, and `@ManyToMany`. These annotations help map Java objects to relational database tables. Below are explanations and syntax for each:
 
 ---
