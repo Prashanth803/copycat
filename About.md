@@ -1,3 +1,29 @@
+const { test: base } = require('@playwright/test');
+const { test: dataFixture } = require('../resources/uat/testdata/testdata');
+const { test: baseFixture } = require('../fixtures/BaseTestFixture');
+const { expect } = require('@playwright/test');
+const { uiFunctions } = require('../utilities/uiFunction');
+
+// Compose both fixtures into one
+const test = baseFixture.extend(dataFixture._fixtures);
+
+// Test case
+test("@regression TC_1: Verify where the user is able to access the payment page", async ({ user1, page }) => {
+  const uiFunction = new uiFunctions(page);
+
+  await uiFunction.navigate(process.env.url);
+  await uiFunction.loginVantage(user1.companyId, user1.userId, user1.password);
+
+  // Example expectation
+  await expect(page).toHaveURL(/.*dashboard.*/); // or whatever the expected page is
+});
+
+
+
+
+
+
+
 Got it! Here's a **refined and appropriate problem statement** specifically for your **project on creating virtual cards** using a payment application:
 
 ---
