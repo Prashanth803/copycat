@@ -1,3 +1,112 @@
+You're doing a great job Lisa! I see the issue more clearly now — and it's mostly **syntax typos** and some **missing braces** or incorrect keywords. Let's fix your test setup completely and clearly 🔧✨
+
+---
+
+## ✅ FIXED VERSION: Everything you need to copy and paste
+
+### ✅ `testdata.js`
+
+```js
+const { test: base } = require('@playwright/test');
+
+const test = base.extend({
+  user1: async ({}, use) => {
+    await use({
+      companyId: "WVCP591",
+      userId: "TOM1010",
+      password: "Feb@2025"
+    });
+  }
+});
+
+module.exports = { test };
+```
+
+---
+
+### ✅ `BaseTestFixture.js`
+
+```js
+const { test: base } = require('@playwright/test');
+const { Home } = require('../pages/Home');
+const { Passcode } = require('../pages/Passcode');
+
+const test = base.extend({
+  page: async ({ page }, use) => {
+    await use(page);
+    await page.close();
+  },
+
+  landingPage: async ({ page }, use) => {
+    const home = new Home(page);
+    await use(home);
+  },
+
+  searchResultsPage: async ({ page }, use) => {
+    const passcode = new Passcode(page);
+    await use(passcode);
+  }
+});
+
+module.exports = { test };
+```
+
+---
+
+### ✅ `paymentPage.spec.js`
+
+```js
+const { test: base, expect } = require('@playwright/test');
+const { test: dataFixture } = require('../resources/uat/testdata/testdata');
+const { test: baseFixture } = require('../fixtures/BaseTestFixture');
+const { uiFunctions } = require('../utilities/uiFunction');
+
+// Merge both fixtures into one test object
+const test = base.extend({
+  ...dataFixture._fixtures,
+  ...baseFixture._fixtures
+});
+
+// Test case
+test('@regression TC_1: Verify user can access the payment page', async ({ user1, page }) => {
+  const uiFunction = new uiFunctions(page);
+
+  await uiFunction.navigate(process.env.url);
+  await uiFunction.loginVantage(user1.companyId, user1.userId, user1.password);
+
+  // Add a sample assertion (adjust as needed)
+  await expect(page).toHaveURL(/.*dashboard.*/);
+});
+```
+
+---
+
+### ✅ Run it using:
+
+```bash
+npx playwright test --headed --reporter=html
+```
+
+---
+
+## 🧹 Main Issues You Had:
+
+| Issue | Fix |
+|------|-----|
+| `tset` instead of `test` | Typo — should be `test` |
+| `except` instead of `expect` | Typo — should be `expect` |
+| `async(({` instead of `async ({` | Syntax issue — use correct parentheses |
+| Missing `{}`/semicolons | Added those |
+| `mergeTests` doesn't exist | Used proper `base.extend({ ... })` instead |
+
+---
+
+Let me know if you want to add multiple users or more fixtures — we can extend this setup elegantly too.
+
+
+
+
+
 Great question! In Playwright with BDD-style tests (e.g., using Cucumber.js), when you're dealing with **multiple feature files**, and **the second one depends on the outcome of the first (e.g., logon)**, you'll need to **share state between the step definitions**. This includes things like the `page` object and possibly login session state.
 
 Here’s how to handle this:
