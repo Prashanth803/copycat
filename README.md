@@ -1,3 +1,57 @@
+Sure! Here's the updated JavaScript version of your functions with the date format changed to `MM/dd/yyyy`:
+
+---
+
+### ✅ Updated JavaScript Code (with `MM/dd/yyyy` format):
+
+```js
+// Utility to generate a random amount
+function amountCalculator(invoice) {
+  const min = invoice === 0 ? 10.0 : 150.0;
+  const max = 1000.0;
+  const amount = Math.round((min + (max - min) * Math.random()) * 100) / 100;
+  return amount;
+}
+
+// Format a Date object to MM/dd/yyyy
+function formatDate(date) {
+  const mm = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+  const dd = String(date.getDate()).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
+
+// Utility to get current date in MM/dd/yyyy format
+function getCurrentDate() {
+  const currentDate = new Date();
+  return formatDate(currentDate);
+}
+
+// Utility to get a future date (added days based on amount % 30)
+function addedDate(amount) {
+  const date = new Date();
+  date.setDate(date.getDate() + (Math.floor(amount) % 30));
+  return formatDate(date);
+}
+```
+
+---
+
+### ✅ Example Usage:
+
+```js
+const invoice = 1; // or 0
+const amount = amountCalculator(invoice);
+
+console.log("Amount:", amount);
+console.log("Current Date:", getCurrentDate());
+console.log("Added Date:", addedDate(amount));
+```
+
+Let me know if you'd like this bundled into a module or class, or if you want to use it in a web app or test script!
+
+
+
 You're doing a great job Lisa! I see the issue more clearly now — and it's mostly **syntax typos** and some **missing braces** or incorrect keywords. Let's fix your test setup completely and clearly 🔧✨
 
 ---
