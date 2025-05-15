@@ -1,3 +1,162 @@
+Perfect — here’s a full Java + Playwright setup, including test suite creation and test report integration using JUnit and Allure.
+
+
+---
+
+1. Maven Setup
+
+Add these dependencies to your pom.xml:
+
+<dependencies>
+  <!-- Playwright for Java -->
+  <dependency>
+    <groupId>com.microsoft.playwright</groupId>
+    <artifactId>playwright</artifactId>
+    <version>1.43.0</version>
+  </dependency>
+
+  <!-- JUnit Jupiter -->
+  <dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.10.0</version>
+    <scope>test</scope>
+  </dependency>
+
+  <!-- Allure for reporting -->
+  <dependency>
+    <groupId>io.qameta.allure</groupId>
+    <artifactId>allure-junit5</artifactId>
+    <version>2.24.0</version>
+    <scope>test</scope>
+  </dependency>
+</dependencies>
+
+<build>
+  <plugins>
+    <!-- Surefire plugin to run tests -->
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <version>3.1.2</version>
+    </plugin>
+
+    <!-- Allure report plugin -->
+    <plugin>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-maven</artifactId>
+      <version>2.11.2</version>
+    </plugin>
+  </plugins>
+</build>
+
+
+---
+
+2. Playwright Test Example (JUnit5)
+
+Create src/test/java/tests/LoginTest.java:
+
+package tests;
+
+import com.microsoft.playwright.*;
+import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class LoginTest {
+  static Playwright playwright;
+  static Browser browser;
+  static Page page;
+
+  @BeforeAll
+  static void setup() {
+    playwright = Playwright.create();
+    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+    page = browser.newPage();
+  }
+
+  @Test
+  @Order(1)
+  public void testLoginPage() {
+    page.navigate("http://localhost:8080/login");
+    assertTrue(page.title().contains("Login"));
+  }
+
+  @Test
+  @Order(2)
+  public void testLoginSuccess() {
+    page.navigate("http://localhost:8080/login");
+    page.fill("#username", "admin");
+    page.fill("#password", "admin");
+    page.click("button[type='submit']");
+    assertTrue(page.url().contains("dashboard"));
+  }
+
+  @AfterAll
+  static void teardown() {
+    browser.close();
+    playwright.close();
+  }
+}
+
+
+---
+
+3. Test Suite
+
+Create a test suite AllTestsSuite.java:
+
+package tests;
+
+import org.junit.platform.suite.api.SelectPackages;
+import org.junit.platform.suite.api.Suite;
+
+@Suite
+@SelectPackages("tests") // runs all test classes in this package
+public class AllTestsSuite {}
+
+Run it via Maven:
+
+mvn test
+
+
+---
+
+4. Allure Reporting Integration
+
+Step-by-step:
+
+1. Run tests to generate results:
+
+
+
+mvn clean test
+
+2. Serve Allure report:
+
+
+
+allure serve target/allure-results
+
+If you don’t have Allure installed:
+
+npm install -g allure-commandline --save-dev
+
+Or use the Allure CLI installer.
+
+
+---
+
+Summary
+
+Would you like a GitHub project template or help setting up headless testing in CI?
+
+
+
+
+
 Great catch! The issue arises due to **floating point rounding** and potentially the way the last few payments get very small amounts. To ensure every generated payment amount is **non-zero** and accurately sums to the total, here are improvements:
 
 1. **Calculate raw values first**, then round only at the end.
