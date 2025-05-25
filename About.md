@@ -1,3 +1,110 @@
+Excellent observation, Lisa! You’re absolutely right.
+
+If there's only one invoice to fill (i === 0 and details4.length === 1), then:
+
+You should fill the form on the first/original page.
+
+Do not click "Add another invoice" — because you're not adding any more.
+
+
+
+---
+
+So, the correct logic should handle 3 cases:
+
+1. First iteration (i === 0):
+
+If this is the only invoice, just fill and click Save.
+
+If there are more invoices, fill and click "Add another invoice" → then capture newPage.
+
+
+
+2. Later iterations (i > 0 && i < last):
+
+Fill in newPage.
+
+Click "Save and add another".
+
+
+
+3. Last iteration (i === last):
+
+Fill in newPage.
+
+Click "Save".
+
+
+
+
+
+---
+
+Final Optimized Code:
+
+let newPage;
+
+for (let i = 0; i < details4.length; i++) {
+  const payment = details4[i];
+  const isLast = i === details4.length - 1;
+
+  // validations
+  expect(this.invoiceEvaluation.invoiceId(payment['invoiceNumber'])).toBe(true);
+  expect(this.invoiceEvaluation.purchaseOrderId(payment['purchaseOrderNumber'])).toBe(true);
+  expect(this.invoiceEvaluation.invoiceAmount(payment['invoiceAmount'])).toBe(true);
+  expect(this.invoiceEvaluation.description(payment['description'])).toBe(true);
+
+  if (i === 0) {
+    // Fill on original page
+    await this.page.fill("input[name='invoiceAmount']", payment['invoiceAmount']);
+    await this.page.fill("input[name='invoiceId']", payment['invoiceNumber']);
+    await this.page.fill("input[name='purchaseOrderId']", payment['purchaseOrderNumber']);
+    await this.page.fill("textarea[name='description']", payment['description']);
+
+    if (details4.length > 1) {
+      // More invoices to come — open new page
+      [newPage] = await Promise.all([
+        this.page.context().waitForEvent('page'),
+        this.page.getByRole('button', { name: 'Add another invoice' }).click()
+      ]);
+      await newPage.waitForLoadState('domcontentloaded');
+    } else {
+      // Only one invoice — click Save on current/original page
+      await this.page.getByRole('button', { name: 'Save', exact: true }).click();
+    }
+  }
+
+  else {
+    // Already on newPage for i >= 1
+    await newPage.fill("input[name='invoiceAmount']", payment['invoiceAmount']);
+    await newPage.fill("input[name='invoiceId']", payment['invoiceNumber']);
+    await newPage.fill("input[name='purchaseOrderId']", payment['purchaseOrderNumber']);
+    await newPage.fill("textarea[name='description']", payment['description']);
+
+    const buttonName = isLast ? 'Save' : 'Save and add another';
+    await newPage.getByRole('button', { name: buttonName, exact: true }).click();
+  }
+
+  const expected = `Invoice number ${payment['invoiceNumber']} saved.`;
+  await expect(this.page.getByText(expected, { exact: true })).toBeVisible();
+
+  await this.page.waitForTimeout(2000);
+}
+
+
+---
+
+This structure is clean, avoids unnecessary page waits, and behaves correctly whether there’s 1 or multiple invoices.
+
+Let me know if you want this refactored into a helper method or POM-style function!
+
+
+
+
+
+
+
+
 Perfect — here’s a full Java + Playwright setup, including test suite creation and test report integration using JUnit and Allure.
 
 
