@@ -1,409 +1,132 @@
-Excellent observation, Lisa! You’re absolutely right.
+Sure, Lisa! Here's how you can refactor the Java method into a **JUnit test** that uses **`assertTrue()`**, **`assertFalse()`**, and **`assertEquals()`** instead of `System.out.println`.
 
-If there's only one invoice to fill (i === 0 and details4.length === 1), then:
-
-You should fill the form on the first/original page.
-
-Do not click "Add another invoice" — because you're not adding any more.
-
-
+We'll use **JUnit 5** for the testing framework, but if you're using JUnit 4, I can provide that version too.
 
 ---
 
-So, the correct logic should handle 3 cases:
+### ✅ **Maven Dependency for JUnit 5** (if not already added)
 
-1. First iteration (i === 0):
-
-If this is the only invoice, just fill and click Save.
-
-If there are more invoices, fill and click "Add another invoice" → then capture newPage.
-
-
-
-2. Later iterations (i > 0 && i < last):
-
-Fill in newPage.
-
-Click "Save and add another".
-
-
-
-3. Last iteration (i === last):
-
-Fill in newPage.
-
-Click "Save".
-
-
-
-
-
----
-
-Final Optimized Code:
-
-let newPage;
-
-for (let i = 0; i < details4.length; i++) {
-  const payment = details4[i];
-  const isLast = i === details4.length - 1;
-
-  // validations
-  expect(this.invoiceEvaluation.invoiceId(payment['invoiceNumber'])).toBe(true);
-  expect(this.invoiceEvaluation.purchaseOrderId(payment['purchaseOrderNumber'])).toBe(true);
-  expect(this.invoiceEvaluation.invoiceAmount(payment['invoiceAmount'])).toBe(true);
-  expect(this.invoiceEvaluation.description(payment['description'])).toBe(true);
-
-  if (i === 0) {
-    // Fill on original page
-    await this.page.fill("input[name='invoiceAmount']", payment['invoiceAmount']);
-    await this.page.fill("input[name='invoiceId']", payment['invoiceNumber']);
-    await this.page.fill("input[name='purchaseOrderId']", payment['purchaseOrderNumber']);
-    await this.page.fill("textarea[name='description']", payment['description']);
-
-    if (details4.length > 1) {
-      // More invoices to come — open new page
-      [newPage] = await Promise.all([
-        this.page.context().waitForEvent('page'),
-        this.page.getByRole('button', { name: 'Add another invoice' }).click()
-      ]);
-      await newPage.waitForLoadState('domcontentloaded');
-    } else {
-      // Only one invoice — click Save on current/original page
-      await this.page.getByRole('button', { name: 'Save', exact: true }).click();
-    }
-  }
-
-  else {
-    // Already on newPage for i >= 1
-    await newPage.fill("input[name='invoiceAmount']", payment['invoiceAmount']);
-    await newPage.fill("input[name='invoiceId']", payment['invoiceNumber']);
-    await newPage.fill("input[name='purchaseOrderId']", payment['purchaseOrderNumber']);
-    await newPage.fill("textarea[name='description']", payment['description']);
-
-    const buttonName = isLast ? 'Save' : 'Save and add another';
-    await newPage.getByRole('button', { name: buttonName, exact: true }).click();
-  }
-
-  const expected = `Invoice number ${payment['invoiceNumber']} saved.`;
-  await expect(this.page.getByText(expected, { exact: true })).toBeVisible();
-
-  await this.page.waitForTimeout(2000);
-}
-
-
----
-
-This structure is clean, avoids unnecessary page waits, and behaves correctly whether there’s 1 or multiple invoices.
-
-Let me know if you want this refactored into a helper method or POM-style function!
-
-
-
-
-
-
-
-
-Perfect — here’s a full Java + Playwright setup, including test suite creation and test report integration using JUnit and Allure.
-
-
----
-
-1. Maven Setup
-
-Add these dependencies to your pom.xml:
-
-<dependencies>
-  <!-- Playwright for Java -->
-  <dependency>
-    <groupId>com.microsoft.playwright</groupId>
-    <artifactId>playwright</artifactId>
-    <version>1.43.0</version>
-  </dependency>
-
-  <!-- JUnit Jupiter -->
-  <dependency>
+```xml
+<dependency>
     <groupId>org.junit.jupiter</groupId>
     <artifactId>junit-jupiter</artifactId>
     <version>5.10.0</version>
     <scope>test</scope>
-  </dependency>
-
-  <!-- Allure for reporting -->
-  <dependency>
-    <groupId>io.qameta.allure</groupId>
-    <artifactId>allure-junit5</artifactId>
-    <version>2.24.0</version>
-    <scope>test</scope>
-  </dependency>
-</dependencies>
-
-<build>
-  <plugins>
-    <!-- Surefire plugin to run tests -->
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-surefire-plugin</artifactId>
-      <version>3.1.2</version>
-    </plugin>
-
-    <!-- Allure report plugin -->
-    <plugin>
-      <groupId>io.qameta.allure</groupId>
-      <artifactId>allure-maven</artifactId>
-      <version>2.11.2</version>
-    </plugin>
-  </plugins>
-</build>
-
+</dependency>
+```
 
 ---
 
-2. Playwright Test Example (JUnit5)
+### ✅ **Java Test Class with Assertions**
 
-Create src/test/java/tests/LoginTest.java:
-
-package tests;
-
-import com.microsoft.playwright.*;
-import org.junit.jupiter.api.*;
+```java
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class LoginTest {
-  static Playwright playwright;
-  static Browser browser;
-  static Page page;
+public class VirtualCardResponseTest {
 
-  @BeforeAll
-  static void setup() {
-    playwright = Playwright.create();
-    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-    page = browser.newPage();
-  }
+    private boolean hasValidVirtualCardStructure(JsonNode root) {
+        if (!root.has("virtualCard")) return false;
 
-  @Test
-  @Order(1)
-  public void testLoginPage() {
-    page.navigate("http://localhost:8080/login");
-    assertTrue(page.title().contains("Login"));
-  }
+        JsonNode card = root.get("virtualCard");
 
-  @Test
-  @Order(2)
-  public void testLoginSuccess() {
-    page.navigate("http://localhost:8080/login");
-    page.fill("#username", "admin");
-    page.fill("#password", "admin");
-    page.click("button[type='submit']");
-    assertTrue(page.url().contains("dashboard"));
-  }
+        String[] requiredKeys = {
+            "cardNumber", "expirationDate", "securityCode", "status", "createdDatetime"
+        };
 
-  @AfterAll
-  static void teardown() {
-    browser.close();
-    playwright.close();
-  }
-}
+        for (String key : requiredKeys) {
+            if (!card.has(key)) return false;
+        }
 
-
----
-
-3. Test Suite
-
-Create a test suite AllTestsSuite.java:
-
-package tests;
-
-import org.junit.platform.suite.api.SelectPackages;
-import org.junit.platform.suite.api.Suite;
-
-@Suite
-@SelectPackages("tests") // runs all test classes in this package
-public class AllTestsSuite {}
-
-Run it via Maven:
-
-mvn test
-
-
----
-
-4. Allure Reporting Integration
-
-Step-by-step:
-
-1. Run tests to generate results:
-
-
-
-mvn clean test
-
-2. Serve Allure report:
-
-
-
-allure serve target/allure-results
-
-If you don’t have Allure installed:
-
-npm install -g allure-commandline --save-dev
-
-Or use the Allure CLI installer.
-
-
----
-
-Summary
-
-Would you like a GitHub project template or help setting up headless testing in CI?
-
-
-
-
-
-Great catch! The issue arises due to **floating point rounding** and potentially the way the last few payments get very small amounts. To ensure every generated payment amount is **non-zero** and accurately sums to the total, here are improvements:
-
-1. **Calculate raw values first**, then round only at the end.
-2. Ensure the smallest chunk doesn't go below 0.01.
-
-Here’s the updated class:
-
-```js
-class PaymentGenerator {
-  constructor(amount) {
-    this.amount = amount;
-  }
-
-  generatePayments(invoice) {
-    const paymentList = [];
-    const numberOfPayments = invoice === 0 ? 1 + Math.floor(Math.random() * 5) : 150;
-
-    let weights = [];
-    let weightSum = 0;
-
-    for (let i = 0; i < numberOfPayments; i++) {
-      const weight = 1 + Math.random(); // ensures at least some weight
-      weights.push(weight);
-      weightSum += weight;
+        return "Approved".equals(card.get("status").asText());
     }
 
-    let remaining = this.amount;
+    @Test
+    public void testValidVirtualCardResponse() throws Exception {
+        String json = """
+        {
+            "virtualCard": {
+                "cardNumber": "4159285815450059",
+                "expirationDate": "2025-06-10",
+                "securityCode": "500",
+                "status": "Approved",
+                "createdDatetime": "2025-05-26T04:52:48"
+            }
+        }
+        """;
 
-    for (let i = 0; i < numberOfPayments; i++) {
-      const payment = {};
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(json);
 
-      payment.facilityName = `fcl${Math.floor(100 + Math.random() * 900)}`;
-      payment.invoiceNumber = `${Math.floor(Math.random() * 20)}`;
-      payment.purchaseOrderNumber = `po${Math.floor(Math.random() * 1000)}`;
-      payment.description = `desc${Math.floor(Math.random() * 100)}`;
+        assertTrue(root.has("virtualCard"), "Missing 'virtualCard' key");
 
-      let rawAmount;
+        JsonNode card = root.get("virtualCard");
 
-      if (i === numberOfPayments - 1) {
-        // Last payment gets whatever is left
-        rawAmount = remaining;
-      } else {
-        rawAmount = (weights[i] / weightSum) * this.amount;
-        rawAmount = Math.max(rawAmount, 0.01); // prevent zero
-        rawAmount = Math.min(rawAmount, remaining); // don't overdraw
-      }
+        assertAll("Verify required fields exist",
+            () -> assertTrue(card.has("cardNumber"), "Missing 'cardNumber'"),
+            () -> assertTrue(card.has("expirationDate"), "Missing 'expirationDate'"),
+            () -> assertTrue(card.has("securityCode"), "Missing 'securityCode'"),
+            () -> assertTrue(card.has("status"), "Missing 'status'"),
+            () -> assertTrue(card.has("createdDatetime"), "Missing 'createdDatetime'")
+        );
 
-      const invoiceAmount = Math.round(rawAmount * 100) / 100;
-      remaining = Math.round((remaining - invoiceAmount) * 100) / 100;
-
-      payment.amount = invoiceAmount;
-      paymentList.push(payment);
+        assertEquals("Approved", card.get("status").asText(), "Status is not 'Approved'");
     }
 
-    return paymentList;
-  }
-}
-```
+    @Test
+    public void testInvalidStatus() throws Exception {
+        String json = """
+        {
+            "virtualCard": {
+                "cardNumber": "4159285815450059",
+                "expirationDate": "2025-06-10",
+                "securityCode": "500",
+                "status": "Declined",
+                "createdDatetime": "2025-05-26T04:52:48"
+            }
+        }
+        """;
 
-### Notes:
-- Every payment will now be at least **0.01**.
-- The final payment ensures **total = this.amount** (subject to small rounding loss).
-- If you want to **guarantee total match** to cents, we can adjust the last amount to cover the rounding gap precisely.
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(json);
+        JsonNode card = root.get("virtualCard");
 
-Let me know if you'd like that version too!
-
-
-Here’s the **Java-to-JavaScript** conversion of your `paymentInfo(int invoice)` method. It simulates payment splits using weighted random distribution, mimicking `SecureRandom`, `List<Map<String, Object>>`, and rounding to two decimal places:
-
----
-
-### ✅ JavaScript Version
-
-```js
-class PaymentGenerator {
-  constructor(amount) {
-    this.amount = amount;
-  }
-
-  getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  getRandomDouble(min, max) {
-    return Math.random() * (max - min) + min;
-  }
-
-  roundToTwo(value) {
-    return Math.round(value * 100) / 100;
-  }
-
-  paymentInfo(invoice) {
-    const paymentList = [];
-    let remainingAmount = this.amount;
-    const numberOfPayments = invoice === 0 ? this.getRandomInt(1, 5) : 150;
-
-    // Generate weights
-    const weights = Array.from({ length: numberOfPayments }, () => 1 + Math.random());
-    const weightSum = weights.reduce((acc, val) => acc + val, 0);
-
-    for (let i = 0; i < numberOfPayments; i++) {
-      const payment = {};
-
-      const facilityName = "fcl" + this.getRandomInt(100, 999);
-      const invoiceNumber = this.getRandomInt(0, 19).toString();
-      const purchaseOrderNumber = "po" + this.getRandomInt(0, 999);
-      const description = "desc" + this.getRandomInt(0, 99);
-
-      let invoiceAmount;
-
-      if (i === numberOfPayments - 1) {
-        invoiceAmount = this.roundToTwo(remainingAmount);
-      } else {
-        invoiceAmount = this.roundToTwo((weights[i] / weightSum) * this.amount);
-        remainingAmount -= invoiceAmount;
-      }
-
-      payment.facilityName = facilityName;
-      payment.invoiceNumber = invoiceNumber;
-      payment.purchaseOrderNumber = purchaseOrderNumber;
-      payment.description = description;
-      payment.invoiceAmount = invoiceAmount;
-
-      paymentList.push(payment);
+        assertNotEquals("Approved", card.get("status").asText(), "Status should not be 'Approved'");
     }
 
-    return paymentList;
-  }
+    @Test
+    public void testMissingVirtualCardKey() throws Exception {
+        String json = """
+        {
+            "cardNumber": "4159285815450059"
+        }
+        """;
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(json);
+
+        assertFalse(root.has("virtualCard"), "Should not contain 'virtualCard'");
+    }
 }
 ```
 
 ---
 
-### ✅ Usage Example:
+### 🧪 Summary of What This Covers:
 
-```js
-const generator = new PaymentGenerator(1000.0); // amount
-const payments = generator.paymentInfo(0); // Pass 0 or any number
+| Test Method                    | What it Verifies                                           |
+| ------------------------------ | ---------------------------------------------------------- |
+| `testValidVirtualCardResponse` | Full valid structure with all keys and `status = Approved` |
+| `testInvalidStatus`            | The `status` is **not** Approved                           |
+| `testMissingVirtualCardKey`    | Response does **not** contain `virtualCard` key            |
 
-console.log(payments);
-```
+---
 
-Let me know if you want to include dates like `addedDate`, or return the result as JSON!
+Let me know if you want:
+
+* To integrate it with **RestAssured** API test
+* JUnit 4 version
+* Add regex/date format checks to the test
