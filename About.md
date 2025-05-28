@@ -1,132 +1,103 @@
-Sure, Lisa! Here's how you can refactor the Java method into a **JUnit test** that uses **`assertTrue()`**, **`assertFalse()`**, and **`assertEquals()`** instead of `System.out.println`.
-
-We'll use **JUnit 5** for the testing framework, but if you're using JUnit 4, I can provide that version too.
+Great, Lisa. Here's exactly where and how to integrate that `generateStubs` task into your Gradle project.
 
 ---
 
-### ✅ **Maven Dependency for JUnit 5** (if not already added)
+## ✅ Where to Place the Code
 
-```xml
-<dependency>
-    <groupId>org.junit.jupiter</groupId>
-    <artifactId>junit-jupiter</artifactId>
-    <version>5.10.0</version>
-    <scope>test</scope>
-</dependency>
+You should place this code **inside your main `build.gradle` file** — typically found at:
+
+```
+<your-project-root>/build.gradle
 ```
 
 ---
 
-### ✅ **Java Test Class with Assertions**
+## 🧩 Final Integration Steps
+
+### 1. **Paste the code at the bottom of your `build.gradle`** file:
+
+Place the following block **after** your `dependencies {}` block:
+
+```groovy
+configurations {
+    cxfTools
+}
+
+dependencies {
+    // Your existing dependencies...
+
+    // Add these just below
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-core:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-common:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-frontend-jaxws:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-databinding-jaxb:3.5.3'
+}
+
+task generateStubs(type: Exec) {
+    def outputDir = "$buildDir/generated-sources/wsdl"
+    def wsdlFile = "$projectDir/src/main/resources/service.wsdl"
+
+    doFirst {
+        file(outputDir).mkdirs()
+    }
+
+    commandLine 'java',
+        '-cp', configurations.cxfTools.asPath,
+        'org.apache.cxf.tools.wsdlto.WSDLToJava',
+        '-d', outputDir,
+        wsdlFile
+}
+
+sourceSets.main.java.srcDirs += "$buildDir/generated-sources/wsdl"
+```
+
+---
+
+### 2. **Make sure your `.wsdl` file exists**
+
+Put your WSDL file here:
+
+```
+src/main/resources/service.wsdl
+```
+
+If it's named differently, update:
+
+```groovy
+def wsdlFile = "$projectDir/src/main/resources/YOUR_FILENAME.wsdl"
+```
+
+---
+
+### 3. **Generate the CXF Stubs**
+
+Run this command:
+
+```bash
+./gradlew generateStubs
+```
+
+This will generate the Java client code in:
+
+```
+build/generated-sources/wsdl/
+```
+
+And your project will automatically include them in the main source set.
+
+---
+
+### ✅ Optional: Use the Generated Classes
+
+You can now create the client like this (based on the generated classes):
 
 ```java
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
+MyService_Service service = new MyService_Service();
+MyService port = service.getMyServicePort();
 
-import static org.junit.jupiter.api.Assertions.*;
-
-public class VirtualCardResponseTest {
-
-    private boolean hasValidVirtualCardStructure(JsonNode root) {
-        if (!root.has("virtualCard")) return false;
-
-        JsonNode card = root.get("virtualCard");
-
-        String[] requiredKeys = {
-            "cardNumber", "expirationDate", "securityCode", "status", "createdDatetime"
-        };
-
-        for (String key : requiredKeys) {
-            if (!card.has(key)) return false;
-        }
-
-        return "Approved".equals(card.get("status").asText());
-    }
-
-    @Test
-    public void testValidVirtualCardResponse() throws Exception {
-        String json = """
-        {
-            "virtualCard": {
-                "cardNumber": "4159285815450059",
-                "expirationDate": "2025-06-10",
-                "securityCode": "500",
-                "status": "Approved",
-                "createdDatetime": "2025-05-26T04:52:48"
-            }
-        }
-        """;
-
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(json);
-
-        assertTrue(root.has("virtualCard"), "Missing 'virtualCard' key");
-
-        JsonNode card = root.get("virtualCard");
-
-        assertAll("Verify required fields exist",
-            () -> assertTrue(card.has("cardNumber"), "Missing 'cardNumber'"),
-            () -> assertTrue(card.has("expirationDate"), "Missing 'expirationDate'"),
-            () -> assertTrue(card.has("securityCode"), "Missing 'securityCode'"),
-            () -> assertTrue(card.has("status"), "Missing 'status'"),
-            () -> assertTrue(card.has("createdDatetime"), "Missing 'createdDatetime'")
-        );
-
-        assertEquals("Approved", card.get("status").asText(), "Status is not 'Approved'");
-    }
-
-    @Test
-    public void testInvalidStatus() throws Exception {
-        String json = """
-        {
-            "virtualCard": {
-                "cardNumber": "4159285815450059",
-                "expirationDate": "2025-06-10",
-                "securityCode": "500",
-                "status": "Declined",
-                "createdDatetime": "2025-05-26T04:52:48"
-            }
-        }
-        """;
-
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(json);
-        JsonNode card = root.get("virtualCard");
-
-        assertNotEquals("Approved", card.get("status").asText(), "Status should not be 'Approved'");
-    }
-
-    @Test
-    public void testMissingVirtualCardKey() throws Exception {
-        String json = """
-        {
-            "cardNumber": "4159285815450059"
-        }
-        """;
-
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(json);
-
-        assertFalse(root.has("virtualCard"), "Should not contain 'virtualCard'");
-    }
-}
+port.callSomeSoapMethod();
 ```
 
 ---
 
-### 🧪 Summary of What This Covers:
-
-| Test Method                    | What it Verifies                                           |
-| ------------------------------ | ---------------------------------------------------------- |
-| `testValidVirtualCardResponse` | Full valid structure with all keys and `status = Approved` |
-| `testInvalidStatus`            | The `status` is **not** Approved                           |
-| `testMissingVirtualCardKey`    | Response does **not** contain `virtualCard` key            |
-
----
-
-Let me know if you want:
-
-* To integrate it with **RestAssured** API test
-* JUnit 4 version
-* Add regex/date format checks to the test
+Let me know if you want to automate stub generation as part of the build, or need help refactoring old Axis2 code to use these new CXF stubs!
