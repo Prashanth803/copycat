@@ -76,23 +76,23 @@ dependencies {
 }
 
 task generateStubs(type: Exec) {
-    def outputDir = "$buildDir/generated-sources/wsdl"
-    def wsdlFile = "$projectDir/src/main/resources/service.wsdl"
+    def outputDir = layout.buildDirectory.dir("generated-sources/wsdl").get().asFile
+    def wsdlFile = file("src/main/resources/service.wsdl")
 
     doFirst {
-        if (!file(wsdlFile).exists()) {
-            throw new GradleException("WSDL file not found at $wsdlFile")
+        if (!wsdlFile.exists()) {
+            throw new GradleException("WSDL file not found at ${wsdlFile}")
         }
-        file(outputDir).mkdirs()
+        outputDir.mkdirs()
     }
 
     commandLine 'java',
         '-cp', configurations.cxfTools.asPath,
         'org.apache.cxf.tools.wsdlto.WSDLToJava',
-        '-d', outputDir,
-        wsdlFile
+        '-d', outputDir.absolutePath,
+        wsdlFile.absolutePath
 }
 
 afterEvaluate {
-    sourceSets.main.java.srcDirs += file("$buildDir/generated-sources/wsdl")
+    sourceSets.main.java.srcDirs += layout.buildDirectory.dir("generated-sources/wsdl").get().asFile
 }
