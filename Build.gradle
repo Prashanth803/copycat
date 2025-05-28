@@ -1,0 +1,98 @@
+// Cleaned and valid Gradle file for Java 17 migration using Apache CXF
+plugins {
+    id 'java'
+    id 'war'
+    id 'org.springframework.boot' version '3.4.5'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'eclipse'
+    id 'jacoco'
+    id 'org.sonarqube' version '4.0.0.2929'
+    id 'project-report'
+    id 'idea'
+    id 'maven-publish'
+    id 'distribution'
+    id 'org.openrewrite.rewrite' version '7.2.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'com.wellsfargo.ebssh.orchestra:platform-service-bom:3.9.5'
+    }
+}
+
+rewrite {
+    activeRecipe("org.openrewrite.java.migrate.UpgradeToJava17")
+    setExportDatatables(true)
+}
+
+configurations {
+    cxfTools
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+ext['tomcat.version'] = '11.0.6'
+
+dependencies {
+    // OpenRewrite for Java 17 migration
+    rewrite("org.openrewrite.recipe:rewrite-spring:6.3.0")
+
+    // Apache CXF Tools for WSDL to Java
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-core:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-common:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-frontend-jaxws:3.5.3'
+    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-databinding-jaxb:3.5.3'
+
+    // JAXB and JAX-WS dependencies for Java 17
+    cxfTools 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
+    cxfTools 'org.glassfish.jaxb:jaxb-runtime:3.0.2'
+    cxfTools 'jakarta.activation:jakarta.activation-api:2.1.1'
+    cxfTools 'jakarta.xml.ws:jakarta.xml.ws-api:3.0.1'
+
+    // Application dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    implementation 'jakarta.xml.ws:jakarta.xml.ws-api:3.0.1'
+    implementation 'jakarta.activation:jakarta.activation-api:2.1.1'
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:3.0.2'
+    implementation 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+
+task generateStubs(type: Exec) {
+    def outputDir = "$buildDir/generated-sources/wsdl"
+    def wsdlFile = "$projectDir/src/main/resources/service.wsdl"
+
+    doFirst {
+        if (!file(wsdlFile).exists()) {
+            throw new GradleException("WSDL file not found at $wsdlFile")
+        }
+        file(outputDir).mkdirs()
+    }
+
+    commandLine 'java',
+        '-cp', configurations.cxfTools.asPath,
+        'org.apache.cxf.tools.wsdlto.WSDLToJava',
+        '-d', outputDir,
+        wsdlFile
+}
+
+afterEvaluate {
+    sourceSets.main.java.srcDirs += file("$buildDir/generated-sources/wsdl")
+}
