@@ -55,8 +55,10 @@ dependencies {
     cxfTools 'org.apache.cxf:cxf-tools-wsdlto-databinding-jaxb:3.5.3'
 
     // JAXB and JAX-WS dependencies for Java 17
-    cxfTools 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
-    cxfTools 'org.glassfish.jaxb:jaxb-runtime:3.0.2'
+    cxfTools 'javax.xml.bind:jaxb-api:2.3.1'
+    cxfTools 'com.sun.xml.bind:jaxb-core:2.3.0.1'
+    cxfTools 'com.sun.xml.bind:jaxb-impl:2.3.3'
+    cxfTools 'javax.activation:activation:1.1.1
     cxfTools 'jakarta.activation:jakarta.activation-api:2.1.1'
     cxfTools 'jakarta.xml.ws:jakarta.xml.ws-api:3.0.1'
 
