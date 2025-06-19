@@ -1,323 +1,256 @@
-Here's a professional and clear email you can send to your manager:
+package com.wellsfargo.ps.service.sdd;
 
+import com.wellsfargo.ps.bo.APDetailsDTO;
+import com.wellsfargo.ps.bo.AddendumDTO;
+import com.wellsfargo.ps.bo.NotifyRequestDetails;
+import com.wellsfargo.ps.client.ws.C3GCommonClient;
+import com.wellsfargo.ps.client.ws.RemittanceServiceClient;
+import com.wellsfargo.ps.core.exception.PSException;
+import com.wellsfargo.ps.dao.sdd.ISDDDao;
+import com.wellsfargo.ps.dto.sharedservices.SDDNotifyRequest;
+import com.wellsfargo.ps.dto.sharedservices.SDDNotifyResponse;
+import com.wellsfargo.ps.util.APDetailDomUtil;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.FileSystemResource;
 
----
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
-Subject: Access to [Tool Name] Still Pending – Request for Follow-Up
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-Hi [Manager's Name],
+@ExtendWith(MockitoExtension.class)
+class SDDServiceImplTest {
 
-I hope you're doing well.
+    @Mock
+    private ISDDDao sddDao;
 
-I wanted to bring to your attention that I still haven't received access to [Tool Name], for which I raised a request approximately a month ago. I recently noticed that my name has been removed from the pending approval list, which seems to indicate that access has already been granted — however, I can confirm that I still do not have access.
+    @Mock
+    private RemittanceServiceClient remittanceServiceClient;
 
-Could you please assist in checking the current status or advise on the next steps? I’m concerned this might impact my work if not resolved soon.
+    @Mock
+    private C3GCommonClient c3gCommonClient;
 
-Appreciate your support as always.
+    @InjectMocks
+    private SDDServiceImpl sddService;
 
-Best regards,
-[Your Full Name]
-[Your Employee ID or Team, if needed]
+    private APDetailsDTO detail;
+    private NotifyRequestDetails notifyRequestDetails;
+    private SDDNotifyRequest sddNotifyRequest;
+    private LinkedHashMap<String, String> emailMap;
 
+    @BeforeEach
+    void setUp() {
+        detail = new APDetailsDTO();
+        detail.setTransactionId("T123");
+        detail.setPayeeNotifiableFlag("Y");
 
----
+        List<APDetailsDTO> detailList = new ArrayList<>();
+        detailList.add(detail);
 
-Let me know if you want to include any request/ticket numbers or add a more assertive tone.
+        notifyRequestDetails = new NotifyRequestDetails();
+        notifyRequestDetails.setDetails(detailList);
+        notifyRequestDetails.setRequestType("SDD");
 
+        sddNotifyRequest = new SDDNotifyRequest();
+        sddNotifyRequest.setApDetails(detailList);
+        sddNotifyRequest.setRequestType("SDD");
+        sddNotifyRequest.setEmailMap(new LinkedHashMap<>());
 
-
-Great question. When your method involves multiple cryptographic components like:
-
-KeyGenerator.getInstance(...)
-
-SecretKeySpec(...)
-
-Cipher.getInstance(...)
-
-
-— each of these can fail in different ways, typically throwing NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, etc.
-
-
----
-
-✅ Best Practice: Define a Domain-Specific Exception
-
-Instead of throwing all the standard Java exceptions up the stack, wrap them in a domain-specific exception like EncryptionOperationException or CryptoProcessingException.
-
-
----
-
-✅ Step 1: Define a Custom Crypto Exception
-
-public class CryptoProcessingException extends Exception {
-    public CryptoProcessingException(String message) {
-        super(message);
+        emailMap = new LinkedHashMap<>();
     }
 
-    public CryptoProcessingException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
-
-
----
-
-✅ Step 2: Wrap All Underlying Exceptions
-
-Here’s an example of how you might use it:
-
-public byte[] encrypt(String data, byte[] secret) throws CryptoProcessingException {
-    try {
-        // Step 1: Get KeyGenerator instance
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(128); // or your desired key size
-        SecretKey secretKey = keyGen.generateKey();
-
-        // Step 2: Create SecretKeySpec from raw key bytes
-        SecretKeySpec secretKeySpec = new SecretKeySpec(secret, "AES");
-
-        // Step 3: Get Cipher instance and initialize
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
-
-        // Step 4: Encrypt the data
-        return cipher.doFinal(data.getBytes());
-
-    } catch (NoSuchAlgorithmException | NoSuchPaddingException |
-             InvalidKeyException | IllegalBlockSizeException |
-             BadPaddingException e) {
-        throw new CryptoProcessingException("Encryption failed", e);
-    }
-}
-
-
----
-
-🔍 Why Wrap in a Custom Exception?
-
-You centralize crypto failure handling.
-
-The calling method doesn’t need to know low-level Java crypto exception types.
-
-Easier to log/debug and rethrow at appropriate levels.
-
-
-
----
-
-✅ If You Want to Be Even More Specific...
-
-You can define multiple exceptions:
-
-public class KeyGenerationException extends CryptoProcessingException { ... }
-public class CipherInitializationException extends CryptoProcessingException { ... }
-
-…but for most apps, a single CryptoProcessingException is enough unless your app must recover differently for keygen vs cipher errors.
-
-
----
-
-Would you like help refactoring your current method with this exception pattern applied?
-
-
-
-You're absolutely right — and this is a key point in large refactorings like migrating from **Axis2 to Apache CXF**.
-
-### 🔁 The Dilemma:
-
-* **You want to delete the Axis2 stub files** to fully migrate.
-* **But many parts of your code still import or use those stubs**, so removing them breaks compilation, and Rewrite recipes can't run.
-
----
-
-### ✅ Here's a Step-by-Step Strategy That Works
-
-Instead of immediately deleting the Axis2-generated stubs, **transition gradually**:
-
----
-
-### ✅ Phase 1: Let Rewrite Help You Identify Axis2 Usage
-
-1. **Restore Axis2 stub files temporarily** so the build can compile.
-
-2. In your `build.gradle`, **enable OpenRewrite with this recipe**:
-
-   ```groovy
-   rewrite {
-       activeRecipe("org.openrewrite.java.search.FindTypes")
-       // This recipe will help us identify Axis2 usage.
-   }
-   ```
-
-3. In your `rewrite.yml` file (create if needed):
-
-   ```yaml
-   type: specs.openrewrite.org/v1beta/recipe
-   name: find.axis2.usages
-   recipeList:
-     - org.openrewrite.java.search.FindTypes:
-         fullyQualifiedTypeName: org.apache.axis2.AxisFault
-   ```
-
-   You can add more like:
-
-   ```yaml
-     - org.openrewrite.java.search.FindTypes:
-         fullyQualifiedTypeName: org.apache.axis2.client.ServiceClient
-     - org.openrewrite.java.search.FindTypes:
-         fullyQualifiedTypeName: org.apache.axis2.databinding.ADBBean
-   ```
-
-4. Run the Rewrite plugin:
-
-   ```bash
-   ./gradlew rewriteRun
-   ```
-
-   This will annotate or highlight all usages of Axis2 types.
-
----
-
-### ✅ Phase 2: Manually Replace Axis2-Specific Code
-
-After identifying all usage points:
-
-1. **Refactor the code manually or with additional Rewrite recipes** to:
-
-   * Replace `AxisFault` with `javax.xml.ws.WebServiceException` or a CXF-specific exception.
-   * Replace `ServiceClient` logic with JAX-WS `Service` and proxy usage.
-   * Replace data-binding objects with JAXB-based CXF stubs.
-
-2. **Then safely delete Axis2 stubs and dependencies**.
-
----
-
-### ✅ Phase 3: Regenerate Stubs with CXF
-
-After Axis2 usage is eliminated:
-
-* Remove the Axis2 dependencies and stub files.
-* Use your `generateStubs` Gradle task to regenerate stubs from WSDL via CXF.
-* Update service calls to use new CXF-generated service classes.
-
----
-
-### If You Prefer a One-Shot Migration…
-
-You could use **OpenRewrite’s custom recipes** to:
-
-* Replace `AxisFault` with a more generic `WebServiceException`
-* Replace all Axis2 classes with mocks
-* Then **delete the stubs**
-* Then regenerate CXF stubs and finally adjust imports
-
-But in practice, **gradual migration** as described is more stable and manageable.
-
-Would you like help writing custom Rewrite recipes to replace specific Axis2 usages like `AxisFault` or `ServiceClient`?
-
-
-
-
-Great, Lisa. Here's exactly where and how to integrate that `generateStubs` task into your Gradle project.
-
----
-
-## ✅ Where to Place the Code
-
-You should place this code **inside your main `build.gradle` file** — typically found at:
-
-```
-<your-project-root>/build.gradle
-```
-
----
-
-## 🧩 Final Integration Steps
-
-### 1. **Paste the code at the bottom of your `build.gradle`** file:
-
-Place the following block **after** your `dependencies {}` block:
-
-```groovy
-configurations {
-    cxfTools
-}
-
-dependencies {
-    // Your existing dependencies...
-
-    // Add these just below
-    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-core:3.5.3'
-    cxfTools 'org.apache.cxf:cxf-tools-common:3.5.3'
-    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-frontend-jaxws:3.5.3'
-    cxfTools 'org.apache.cxf:cxf-tools-wsdlto-databinding-jaxb:3.5.3'
-}
-
-task generateStubs(type: Exec) {
-    def outputDir = "$buildDir/generated-sources/wsdl"
-    def wsdlFile = "$projectDir/src/main/resources/service.wsdl"
-
-    doFirst {
-        file(outputDir).mkdirs()
+    @Test
+    void testSendOneAtATimePublicMethod() throws Exception {
+        ISDDDao mockDao = mock(ISDDDao.class);
+        when(mockDao.isSDDRecordAlreadyExist(any(), any())).thenReturn(false);
+        sddService.setSddDao(mockDao);
+
+        // Since private method behavior can't be mocked, this will execute real logic
+        assertThrows(PSException.class, () -> sddService.sendOneAtATime(sddNotifyRequest));
     }
 
-    commandLine 'java',
-        '-cp', configurations.cxfTools.asPath,
-        'org.apache.cxf.tools.wsdlto.WSDLToJava',
-        '-d', outputDir,
-        wsdlFile
+    @Test
+    void testGetOutputFileDirPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("getOutputFileDir");
+        method.setAccessible(true);
+        String path = (String) method.invoke(sddService);
+        assertNotNull(path);
+        assertTrue(path.contains("/log/"));
+    }
+
+    @Test
+    void testDecryptPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("decrypt", String.class);
+        method.setAccessible(true);
+
+        assertThrows(Exception.class, () -> {
+            method.invoke(sddService, "dummyEncrypted");
+        });
+    }
+
+    @Test
+    void testGetPackageIdPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("getPackageId", String.class);
+        method.setAccessible(true);
+
+        Long result = (Long) method.invoke(sddService, "12345");
+        assertEquals(12345L, result);
+    }
+
+    @Test
+    void testPaddKeyStatic() {
+        String padded = SDDServiceImpl.paddKey("shortkey");
+        assertEquals(16, padded.length());
+    }
+
+    @Test
+    void testAsByteStatic() {
+        byte[] bytes = SDDServiceImpl.asByte("4f4b");
+        assertEquals(2, bytes.length);
+    }
+
+    @Test
+    void testAsHexStatic() {
+        byte[] input = new byte[]{0x4f, 0x4b};
+        String hex = SDDServiceImpl.ashex(input);
+        assertEquals("4f4b", hex);
+    }
 }
+package com.wellsfargo.ps.service.sdd;
 
-sourceSets.main.java.srcDirs += "$buildDir/generated-sources/wsdl"
-```
+import com.wellsfargo.ps.bo.APDetailsDTO;
+import com.wellsfargo.ps.bo.AddendumDTO;
+import com.wellsfargo.ps.bo.NotifyRequestDetails;
+import com.wellsfargo.ps.client.ws.C3GCommonClient;
+import com.wellsfargo.ps.client.ws.RemittanceServiceClient;
+import com.wellsfargo.ps.core.exception.PSException;
+import com.wellsfargo.ps.dao.sdd.ISDDDao;
+import com.wellsfargo.ps.dto.sharedservices.SDDNotifyRequest;
+import com.wellsfargo.ps.dto.sharedservices.SDDNotifyResponse;
+import com.wellsfargo.ps.util.APDetailDomUtil;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.FileSystemResource;
 
----
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
-### 2. **Make sure your `.wsdl` file exists**
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-Put your WSDL file here:
+@ExtendWith(MockitoExtension.class)
+class SDDServiceImplTest {
 
-```
-src/main/resources/service.wsdl
-```
+    @Mock
+    private ISDDDao sddDao;
 
-If it's named differently, update:
+    @Mock
+    private RemittanceServiceClient remittanceServiceClient;
 
-```groovy
-def wsdlFile = "$projectDir/src/main/resources/YOUR_FILENAME.wsdl"
-```
+    @Mock
+    private C3GCommonClient c3gCommonClient;
 
----
+    @InjectMocks
+    private SDDServiceImpl sddService;
 
-### 3. **Generate the CXF Stubs**
+    private APDetailsDTO detail;
+    private NotifyRequestDetails notifyRequestDetails;
+    private SDDNotifyRequest sddNotifyRequest;
+    private LinkedHashMap<String, String> emailMap;
 
-Run this command:
+    @BeforeEach
+    void setUp() {
+        detail = new APDetailsDTO();
+        detail.setTransactionId("T123");
+        detail.setPayeeNotifiableFlag("Y");
 
-```bash
-./gradlew generateStubs
-```
+        List<APDetailsDTO> detailList = new ArrayList<>();
+        detailList.add(detail);
 
-This will generate the Java client code in:
+        notifyRequestDetails = new NotifyRequestDetails();
+        notifyRequestDetails.setDetails(detailList);
+        notifyRequestDetails.setRequestType("SDD");
 
-```
-build/generated-sources/wsdl/
-```
+        sddNotifyRequest = new SDDNotifyRequest();
+        sddNotifyRequest.setApDetails(detailList);
+        sddNotifyRequest.setRequestType("SDD");
+        sddNotifyRequest.setEmailMap(new LinkedHashMap<>());
 
-And your project will automatically include them in the main source set.
+        emailMap = new LinkedHashMap<>();
+    }
 
----
+    @Test
+    void testSendOneAtATimePublicMethod() throws Exception {
+        ISDDDao mockDao = mock(ISDDDao.class);
+        when(mockDao.isSDDRecordAlreadyExist(any(), any())).thenReturn(false);
+        sddService.setSddDao(mockDao);
 
-### ✅ Optional: Use the Generated Classes
+        // Since private method behavior can't be mocked, this will execute real logic
+        assertThrows(PSException.class, () -> sddService.sendOneAtATime(sddNotifyRequest));
+    }
 
-You can now create the client like this (based on the generated classes):
+    @Test
+    void testGetOutputFileDirPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("getOutputFileDir");
+        method.setAccessible(true);
+        String path = (String) method.invoke(sddService);
+        assertNotNull(path);
+        assertTrue(path.contains("/log/"));
+    }
 
-```java
-MyService_Service service = new MyService_Service();
-MyService port = service.getMyServicePort();
+    @Test
+    void testDecryptPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("decrypt", String.class);
+        method.setAccessible(true);
 
-port.callSomeSoapMethod();
-```
+        assertThrows(Exception.class, () -> {
+            method.invoke(sddService, "dummyEncrypted");
+        });
+    }
 
----
+    @Test
+    void testGetPackageIdPrivate() throws Exception {
+        Method method = SDDServiceImpl.class.getDeclaredMethod("getPackageId", String.class);
+        method.setAccessible(true);
 
-Let me know if you want to automate stub generation as part of the build, or need help refactoring old Axis2 code to use these new CXF stubs!
+        Long result = (Long) method.invoke(sddService, "12345");
+        assertEquals(12345L, result);
+    }
+
+    @Test
+    void testPaddKeyStatic() {
+        String padded = SDDServiceImpl.paddKey("shortkey");
+        assertEquals(16, padded.length());
+    }
+
+    @Test
+    void testAsByteStatic() {
+        byte[] bytes = SDDServiceImpl.asByte("4f4b");
+        assertEquals(2, bytes.length);
+    }
+
+    @Test
+    void testAsHexStatic() {
+        byte[] input = new byte[]{0x4f, 0x4b};
+        String hex = SDDServiceImpl.ashex(input);
+        assertEquals("4f4b", hex);
+    }
+}
