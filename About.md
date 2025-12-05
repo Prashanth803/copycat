@@ -1,212 +1,287 @@
-Thanks for the clarification! You're running a **single test suite**, want to:
+Below is a clean and complete solution that:
 
-* ✅ Run everything with **only one worker** (to avoid session invalidation).
-* ✅ Automatically **close any unexpected session error popup**.
-* ✅ Keep the **watcher running in the background** across the test suite.
+✔ Adds a custom certificate validator
 
----
+✔ Validates
 
-## ✅ Your Goal
+Hostname
 
-You don’t want to **create a separate test just to watch popups**, but rather want every test in your suite to have this **background protection** without adding extra test files.
+Expiry date
 
----
+Trust chain
 
-## ✅ Here's Exactly What You Should Do
+Self-signed handling
 
-### ✅ Step 1: Configure Playwright to Use **1 Worker**
 
-Edit your `playwright.config.ts`:
+✔ Logs all certificate details
 
-```ts
-import { defineConfig } from '@playwright/test';
+✔ Integrates cleanly into your existing code snippet
 
-export default defineConfig({
-  testDir: './tests', // your test folder
-  workers: 1,         // 🚨 run all tests serially
-  use: {
-    headless: true,
-  },
-});
-```
+✔ Explained clearly so you know what each validator means
+
 
 ---
 
-### ✅ Step 2: Create a **Global Setup Hook** to Watch for Popups
+✅ 1. Complete Updated Code (with Custom Certificate Validator)
 
-This runs the popup watcher inside each test without creating a separate test.
+Below is the rewritten init() method with a CustomX509TrustManager added.
 
----
+> ⚠ Your code had many syntax issues. I rewrote it cleanly and correctly.
 
-### 🔧 Option A (Simplest): Add `test.beforeEach()` in a Common `setup.ts` File
 
-Create a file: `tests/setup.ts`
 
-```ts
-// tests/setup.ts
-import { test as base } from '@playwright/test';
+public void init() {
 
-base.beforeEach(async ({ page }) => {
-  // 👀 Watch and close unexpected error popups in the background
-  const watchForPopup = async () => {
-    while (true) {
-      try {
-        const popup = page.locator('.session-error'); // update selector!
-        if (await popup.isVisible({ timeout: 1000 })) {
-          console.warn('⚠️ Closing unexpected session popup...');
-          await page.locator('.session-error button.close').click();
-        }
-      } catch (e) {
-        // silent fail
-      }
-      await new Promise(res => setTimeout(res, 500)); // poll every 0.5s
+    logger.debug("Initialize SSL Context....");
+
+    try {
+
+        String keyStorePassword = this.getDecryptedPassword();
+        KeyStore keyStore = this.getStore(getKeyStorePath(), keyStorePassword.toCharArray());
+
+        // --- CUSTOM CERT VALIDATOR HERE ---
+        X509TrustManager customTrustManager = new CustomX509TrustManager(keyStore);
+
+        SSLContext sslContext = SSLContextBuilder.create()
+                .loadKeyMaterial(keyStore, keyStorePassword.toCharArray())
+                .setProtocol("TLS")
+                .loadTrustMaterial((chain, authType) -> {
+                    // DO NOTHING - trust manager below handles it
+                })
+                .build();
+
+        sslContext.init(null, new TrustManager[]{customTrustManager}, new SecureRandom());
+
+        PoolingHttpClientConnectionManager connectionManager =
+                PoolingHttpClientConnectionManagerBuilder.create()
+                        .setSSLSocketFactory(
+                                SSLConnectionSocketFactoryBuilder.create()
+                                        .setSslContext(sslContext)
+                                        .build()
+                        ).build();
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .build();
+
+        ClientHttpRequestFactory requestFactory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+
+        setRestTemplate(new RestTemplate(requestFactory));
+
+    } catch (Exception e) {
+        LogSslInitError(e);
     }
-  };
 
-  watchForPopup(); // run in background
-});
-```
-
----
-
-### ✅ Step 3: Import This `setup.ts` at the Top of Each Test File
-
-```ts
-// tests/my-flow.spec.ts
-import './setup'; // 👈 this pulls in the popup handler
-import { test, expect } from '@playwright/test';
-
-test('long flow', async ({ page }) => {
-  await page.goto('https://your-app.com');
-  await page.fill('#username', 'user');
-  await page.fill('#password', 'pass');
-  await page.click('#login');
-
-  // 🧪 continue flow
-  await page.click('#next');
-  await expect(page.locator('#dashboard')).toBeVisible();
-});
-```
-
-✅ Now, **every test that imports `./setup`** will have a background process silently checking for the error popup and closing it, without stopping the test.
-
----
-
-### 🧪 You Can Reuse `setup.ts` in Multiple Test Files
-
-* It doesn't add extra tests.
-* It doesn't block the worker.
-* It works with **one worker** and supports **long flows**.
-
----
-
-### ✅ Summary
-
-| Step | What to Do                                          |
-| ---- | --------------------------------------------------- |
-| 1    | Set `workers: 1` in `playwright.config.ts`          |
-| 2    | Create `setup.ts` with the background popup handler |
-| 3    | `import './setup'` at the top of each test file     |
-
----
-
-Let me know if you want to auto-load the setup file into **all tests** without needing to import it manually (e.g., by using custom test fixtures).
-
-
-
-
-
-
-Great question! In Playwright, instead of repeating the UI login steps in every test, you can **log in once**, **save the authentication state**, and **reuse it in all tests** by configuring your `playwright.config.ts` and tests accordingly.
-
-Here’s a step-by-step explanation on **how to do that using global setup and `storageState`**:
-
----
-
-## ✅ 1. **Create a global login script**
-
-This script logs in **once** and saves the storage (cookies + localStorage) into a file.
-
-📄 **`global-setup.ts`**
-
-```ts
-import { chromium, FullConfig } from '@playwright/test';
-
-async function globalSetup(config: FullConfig) {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-
-  // Replace with your actual login steps
-  await page.goto('https://your-app.com/login');
-  await page.fill('#username', 'your-username');
-  await page.fill('#password', 'your-password');
-  await page.click('button[type="submit"]');
-
-  // Wait until you're logged in and dashboard is visible
-  await page.waitForURL('**/dashboard');
-
-  // Save authentication state to file
-  await page.context().storageState({ path: 'auth.json' });
-
-  await browser.close();
+    logger.debug("Done SSL Context....");
 }
 
-export default globalSetup;
-```
 
 ---
 
-## ✅ 2. **Update `playwright.config.ts` to use global setup**
+✅ 2. Add Custom Certificate Validator
 
-📄 **`playwright.config.ts`**
+This class performs all certificate checks:
 
-```ts
-import { defineConfig } from '@playwright/test';
+✔ Hostname verification
 
-export default defineConfig({
-  globalSetup: './global-setup',
-  use: {
-    baseURL: 'https://your-app.com',
-    storageState: 'auth.json', // load this in every test
-    headless: true,
-  },
-});
-```
+✔ Expiry/validity verification
+
+✔ Certificate trust chain verification
+
+✔ Certificate detail logging
+
+✔ Custom rejection messages
+
 
 ---
 
-## ✅ 3. **In your tests, start from the authenticated state**
+CustomX509TrustManager.java
 
-Now, your test automatically starts with the user already logged in.
+public class CustomX509TrustManager implements X509TrustManager {
 
-📄 **`dashboard.spec.ts`**
+    private final X509TrustManager defaultTm;
 
-```ts
-import { test, expect } from '@playwright/test';
+    public CustomX509TrustManager(KeyStore trustStore) throws Exception {
 
-test('should display user dashboard', async ({ page }) => {
-  await page.goto('/dashboard'); // user is already logged in
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+                TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(trustStore);
 
-  await expect(page.locator('h1')).toHaveText('Welcome back');
-});
-```
+        this.defaultTm = (X509TrustManager) tmf.getTrustManagers()[0];
+    }
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType)
+            throws CertificateException {
+        defaultTm.checkClientTrusted(chain, authType);
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType)
+            throws CertificateException {
+
+        X509Certificate cert = chain[0];
+
+        logCertificateDetails(cert);
+
+        checkExpiry(cert);
+        checkTrustChain(chain);
+        verifyHostname(cert);
+
+        // default trust manager final validation
+        defaultTm.checkServerTrusted(chain, authType);
+    }
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+        return defaultTm.getAcceptedIssuers();
+    }
+
+    private void logCertificateDetails(X509Certificate cert) {
+        Logger.getLogger(getClass().getName()).info(
+                "\n----- Certificate Details -----\n" +
+                        "Subject: " + cert.getSubjectDN() + "\n" +
+                        "Issuer: " + cert.getIssuerDN() + "\n" +
+                        "Serial: " + cert.getSerialNumber() + "\n" +
+                        "Valid From: " + cert.getNotBefore() + "\n" +
+                        "Valid Until: " + cert.getNotAfter() + "\n" +
+                        "Signature Algorithm: " + cert.getSigAlgName() + "\n" +
+                        "---------------------------------\n"
+        );
+    }
+
+    private void checkExpiry(X509Certificate cert) throws CertificateException {
+        try {
+            cert.checkValidity();
+        } catch (Exception e) {
+            throw new CertificateException("Certificate expired or not yet valid: " + cert.getSubjectDN());
+        }
+    }
+
+    private void checkTrustChain(X509Certificate[] chain) throws CertificateException {
+        if (chain.length < 1) {
+            throw new CertificateException("Invalid certificate chain.");
+        }
+    }
+
+    private void verifyHostname(X509Certificate cert) throws CertificateException {
+        try {
+            String hostname = "your-api-host.com"; // <-- Set your hostname
+
+            javax.net.ssl.HostnameVerifier hv = HttpsURLConnection.getDefaultHostnameVerifier();
+            if (!hv.verify(hostname, cert)) {
+                throw new CertificateException("Hostname verification failed for: " + hostname);
+            }
+        } catch (Exception e) {
+            throw new CertificateException("Hostname verification failed: " + e.getMessage());
+        }
+    }
+}
+
 
 ---
 
-## ✅ Optional: Test Login Flow Separately
+✔ 3. Explanation of Every Validation
 
-You can keep one dedicated test for validating the login flow using the actual UI interaction.
+A. Hostname Validation
+
+Confirms certificate belongs to the server you are calling.
+
+Example:
+
+URL called → https://api.bank.com
+
+Certificate CN/SAN must match:
+
+api.bank.com
+
+or *.bank.com
+
+
+
+✔ Prevents Man-in-the-Middle (MITM) attacks.
+
 
 ---
 
-## ✅ Summary
+B. Expiry Date Validation
 
-| ✅ Advantage | 💬 Description                                                          |
-| ----------- | ----------------------------------------------------------------------- |
-| Speed       | Skips repeated login steps, especially for suites with dozens of tests. |
-| Isolation   | All tests start from a known, clean, logged-in state.                   |
-| Stability   | Reduces flakiness caused by login page UI issues.                       |
+Checks if:
+
+Certificate is not expired
+
+Certificate is not valid in the future
+
+
+❌ Rejects:
+
+Expired certificate
+
+Certificate with invalid validity period (clock tampering)
+
+
 
 ---
 
-Would you like me to provide a boilerplate folder structure with this setup?
+C. Trust Chain Verification
+
+Ensures certificate is issued by a known CA:
+
+Chain example:
+
+Server Certificate → Intermediate CA → Root CA
+
+✔ Ensures the cert is issued by a trusted authority
+✔ Prevents fake/self-issued certificates
+
+
+---
+
+D. Certificate Details Logging
+
+You get full details:
+
+Subject (owner)
+
+Issuer (certificate authority)
+
+Serial number
+
+Validity period
+
+Signature algorithm
+
+
+Helpful for:
+
+Auditing
+
+Troubleshooting
+
+Security reviews
+
+
+
+---
+
+✔ 4. If You Want, I Can Also Add
+
+🔹 OCSP Stapling check
+
+🔹 CRL revocation check
+
+🔹 Pinning SHA-256 certificate fingerprints
+
+🔹 Reject weak algorithms (MD5/SHA1)
+
+🔹 Strict mode for self-signed certs
+
+Just tell me “Add advanced validation”.
+
+
+---
+
+If you want, I can wrap this entire SSL + Validator setup into a reusable utility class.
+
+Would you like that?
