@@ -1,535 +1,168 @@
-Sure! Here's the updated JavaScript version of your functions with the date format changed to `MM/dd/yyyy`:
+
+Below is a clean, realistic JUnit 5 + Mockito test case that forces the catch block of your parseFile(...) method to execute and verifies that a RemittanceParserException is thrown.
+
+I’ll show two approaches.
+👉 Approach 1 (Recommended): Force an IOException by giving an invalid file path
+👉 Approach 2: Mock an internal dependency to throw BatchProcessingException
+
 
 ---
 
-### ✅ Updated JavaScript Code (with `MM/dd/yyyy` format):
+✅ Assumptions (based on your code)
 
-```js
-// Utility to generate a random amount
-function amountCalculator(invoice) {
-  const min = invoice === 0 ? 10.0 : 150.0;
-  const max = 1000.0;
-  const amount = Math.round((min + (max - min) * Math.random()) * 100) / 100;
-  return amount;
+You are using JUnit 5
+
+You are using Mockito
+
+parseFile(...) is in a service class like RemittanceFileParser
+
+remittanceFileService is fetched from Spring ApplicationContext
+
+You cannot modify the production code
+
+
+
+---
+
+✅ Imports (common)
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
+
+
+---
+
+✅ APPROACH 1 – Force IOException (Simplest & Most Reliable)
+
+This covers the catch (IOException | BatchProcessingException) block.
+
+✔ Why this works
+
+Files.lines(path, …) throws an IOException if the file does not exist.
+
+
+---
+
+🔹 Test Case
+
+@ExtendWith(MockitoExtension.class)
+class RemittanceFileParserTest {
+
+    @InjectMocks
+    private RemittanceFileParser parser; // class containing parseFile()
+
+    @Mock
+    private ApplicationContext applicationContext;
+
+    @Mock
+    private IRemittanceFileService remittanceFileService;
+
+    @Test
+    void parseFile_shouldThrowRemittanceParserException_whenIOExceptionOccurs() {
+
+        // Arrange
+        when(applicationContext.getBean("remittanceFileService"))
+                .thenReturn(remittanceFileService);
+
+        String invalidFilePath = "non/existing/path/file.txt";
+
+        // Act & Assert
+        RemittanceParserException exception =
+                assertThrows(RemittanceParserException.class, () ->
+                        parser.parseFile(applicationContext, invalidFilePath)
+                );
+
+        // Optional validation
+        assertNotNull(exception.getErrors());
+        assertFalse(exception.getErrors().isEmpty());
+    }
 }
 
-// Format a Date object to MM/dd/yyyy
-function formatDate(date) {
-  const mm = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
-  const dd = String(date.getDate()).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${mm}/${dd}/${yyyy}`;
+✔ This guarantees the catch block is executed
+✔ No mocking of static Files.lines() needed
+✔ Sonar + coverage tools accept this approach
+
+
+---
+
+✅ APPROACH 2 – Force BatchProcessingException (Mock Dependency)
+
+If you specifically want to trigger the second exception type:
+
+
+---
+
+🔹 Test Case
+
+@Test
+void parseFile_shouldThrowRemittanceParserException_whenBatchProcessingExceptionOccurs() {
+
+    // Arrange
+    when(applicationContext.getBean("remittanceFileService"))
+            .thenReturn(remittanceFileService);
+
+    when(remittanceFileService.getDetailId())
+            .thenThrow(new BatchProcessingException("Test exception"));
+
+    // Create a temporary valid file to avoid IOException
+    Path tempFile = Files.createTempFile("test", ".txt");
+
+    // Act & Assert
+    RemittanceParserException exception =
+            assertThrows(RemittanceParserException.class, () ->
+                    parser.parseFile(applicationContext, tempFile.toString())
+            );
+
+    assertNotNull(exception.getErrors());
 }
 
-// Utility to get current date in MM/dd/yyyy format
-function getCurrentDate() {
-  const currentDate = new Date();
-  return formatDate(currentDate);
-}
+✔ Covers BatchProcessingException path
+✔ Ensures the catch block logic is executed
 
-// Utility to get a future date (added days based on amount % 30)
-function addedDate(amount) {
-  const date = new Date();
-  date.setDate(date.getDate() + (Math.floor(amount) % 30));
-  return formatDate(date);
-}
-```
 
 ---
 
-### ✅ Example Usage:
+✅ What This Test Covers
 
-```js
-const invoice = 1; // or 0
-const amount = amountCalculator(invoice);
+✔ catch (IOException | BatchProcessingException)
+✔ Logger.error(...)
+✔ errors.add(new ParseError(...))
+✔ throw new RemittanceParserException(errors);
 
-console.log("Amount:", amount);
-console.log("Current Date:", getCurrentDate());
-console.log("Added Date:", addedDate(amount));
-```
-
-Let me know if you'd like this bundled into a module or class, or if you want to use it in a web app or test script!
-
-
-
-You're doing a great job Lisa! I see the issue more clearly now — and it's mostly **syntax typos** and some **missing braces** or incorrect keywords. Let's fix your test setup completely and clearly 🔧✨
 
 ---
 
-## ✅ FIXED VERSION: Everything you need to copy and paste
+✅ Best Practice (Sonar-friendly)
 
-### ✅ `testdata.js`
+Use Approach 1 for basic coverage
 
-```js
-const { test: base } = require('@playwright/test');
+Use Approach 2 if Sonar demands explicit coverage of BatchProcessingException
 
-const test = base.extend({
-  user1: async ({}, use) => {
-    await use({
-      companyId: "WVCP591",
-      userId: "TOM1010",
-      password: "Feb@2025"
-    });
-  }
-});
 
-module.exports = { test };
-```
 
 ---
 
-### ✅ `BaseTestFixture.js`
+If you want, I can also:
 
-```js
-const { test: base } = require('@playwright/test');
-const { Home } = require('../pages/Home');
-const { Passcode } = require('../pages/Passcode');
+Add assertions on ParseError values
 
-const test = base.extend({
-  page: async ({ page }, use) => {
-    await use(page);
-    await page.close();
-  },
+Mock Logger verification
 
-  landingPage: async ({ page }, use) => {
-    const home = new Home(page);
-    await use(home);
-  },
+Write a 100% coverage test suite for this class
 
-  searchResultsPage: async ({ page }, use) => {
-    const passcode = new Passcode(page);
-    await use(passcode);
-  }
-});
+Help suppress Sonar false positives
 
-module.exports = { test };
-```
 
----
-
-### ✅ `paymentPage.spec.js`
-
-```js
-const { test: base, expect } = require('@playwright/test');
-const { test: dataFixture } = require('../resources/uat/testdata/testdata');
-const { test: baseFixture } = require('../fixtures/BaseTestFixture');
-const { uiFunctions } = require('../utilities/uiFunction');
-
-// Merge both fixtures into one test object
-const test = base.extend({
-  ...dataFixture._fixtures,
-  ...baseFixture._fixtures
-});
-
-// Test case
-test('@regression TC_1: Verify user can access the payment page', async ({ user1, page }) => {
-  const uiFunction = new uiFunctions(page);
-
-  await uiFunction.navigate(process.env.url);
-  await uiFunction.loginVantage(user1.companyId, user1.userId, user1.password);
-
-  // Add a sample assertion (adjust as needed)
-  await expect(page).toHaveURL(/.*dashboard.*/);
-});
-```
-
----
-
-### ✅ Run it using:
-
-```bash
-npx playwright test --headed --reporter=html
-```
-
----
-
-## 🧹 Main Issues You Had:
-
-| Issue | Fix |
-|------|-----|
-| `tset` instead of `test` | Typo — should be `test` |
-| `except` instead of `expect` | Typo — should be `expect` |
-| `async(({` instead of `async ({` | Syntax issue — use correct parentheses |
-| Missing `{}`/semicolons | Added those |
-| `mergeTests` doesn't exist | Used proper `base.extend({ ... })` instead |
-
----
-
-Let me know if you want to add multiple users or more fixtures — we can extend this setup elegantly too.
-
-
-
-
-
-Great question! In Playwright with BDD-style tests (e.g., using Cucumber.js), when you're dealing with **multiple feature files**, and **the second one depends on the outcome of the first (e.g., logon)**, you'll need to **share state between the step definitions**. This includes things like the `page` object and possibly login session state.
-
-Here’s how to handle this:
-
----
-
-### **1. Use a Global `World` Object (Cucumber’s Custom World)**
-Cucumber allows you to define a custom `World` where you can store shared context like the Playwright `page` object, user credentials, or session cookies.
-
-#### **world.js**
-```js
-const { setWorldConstructor } = require('@cucumber/cucumber');
-
-class CustomWorld {
-  constructor() {
-    this.page = null;  // shared page instance
-    this.context = null;  // shared browser context if needed
-  }
-}
-
-setWorldConstructor(CustomWorld);
-```
-
----
-
-### **2. logon.steps.js (for logon.feature)**
-
-```js
-const { Given } = require('@cucumber/cucumber');
-const { chromium } = require('@playwright/test');
-
-Given('the user is logged in', async function () {
-  const browser = await chromium.launch();
-  this.context = await browser.newContext();
-  this.page = await this.context.newPage();
-  await this.page.goto('https://your-app.com/login');
-
-  await this.page.fill('#username', 'myuser');
-  await this.page.fill('#password', 'mypassword');
-  await this.page.click('#login-button');
-
-  // Wait for some post-login element
-  await this.page.waitForSelector('#dashboard');
-});
-```
-
----
-
-### **3. continuation.steps.js (for continuation.feature)**
-
-Now you can continue using `this.page` that was initialized in the login steps:
-
-```js
-const { When, Then } = require('@cucumber/cucumber');
-
-When('the user navigates to the profile page', async function () {
-  // `this.page` is already logged in
-  await this.page.click('a[href="/profile"]');
-});
-
-Then('the user sees their profile details', async function () {
-  await this.page.waitForSelector('#profile-name');
-});
-```
-
----
-
-### **4. Maintaining Context Between Scenarios**
-If your `logon.feature` and `continuation.feature` are **different scenarios** (and not part of the same one), then:
-
-- You **can’t share state** directly between them.
-- Instead, use `Before()` hooks to do login as a precondition for scenarios that need it.
-
-#### Example: `support/hooks.js`
-
-```js
-const { Before } = require('@cucumber/cucumber');
-const { chromium } = require('@playwright/test');
-
-Before({ tags: "@loggedIn" }, async function () {
-  const browser = await chromium.launch();
-  this.context = await browser.newContext();
-  this.page = await this.context.newPage();
-
-  await this.page.goto('https://your-app.com/login');
-  await this.page.fill('#username', 'myuser');
-  await this.page.fill('#password', 'mypassword');
-  await this.page.click('#login-button');
-  await this.page.waitForSelector('#dashboard');
-});
-```
-
-Then in `continuation.feature`, use the tag:
-
-```gherkin
-@loggedIn
-Scenario: User visits profile page
-  When the user navigates to the profile page
-  Then the user sees their profile details
-```
-
----
-
-Would you like me to help scaffold a working folder structure for this or review your actual files?
-
-
-In Spring Boot (with JPA and Hibernate), **relationships** between entities are defined using annotations such as `@OneToMany`, `@ManyToOne`, `@OneToOne`, and `@ManyToMany`. These annotations help map Java objects to relational database tables. Below are explanations and syntax for each:
-
----
-
-## **1. @OneToOne (One-to-One Relationship)**
-This annotation represents a **one-to-one** relationship between two entities.  
-
-**Example:**
-- A **User** has exactly **one Address**.
-
-```java
-@Entity
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "address_id", referencedColumnName = "id")
-    private Address address;
-    
-    // Getters and Setters
-}
-```
-
-```java
-@Entity
-public class Address {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String city;
-    
-    @OneToOne(mappedBy = "address")
-    private User user;
-}
-```
-
-**Explanation:**
-- `@OneToOne`: Defines a one-to-one relationship.
-- `@JoinColumn(name = "address_id")`: Specifies the foreign key column.
-- `mappedBy = "address"`: Means `User` owns the relationship.
-
----
-
-## **2. @OneToMany (One-to-Many Relationship)**
-One entity **has multiple** related entities.  
-
-**Example:**
-- A **Department** has multiple **Employees**.
-
-```java
-@Entity
-public class Department {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Employee> employees = new ArrayList<>();
-}
-```
-
-```java
-@Entity
-public class Employee {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
-}
-```
-
-**Explanation:**
-- `@OneToMany(mappedBy = "department")`: Specifies that `Department` owns the relationship.
-- `@ManyToOne`: Defines the many-to-one side.
-- `@JoinColumn(name = "department_id")`: Specifies the foreign key column.
-- `cascade = CascadeType.ALL`: If a department is deleted, its employees are deleted.
-- `orphanRemoval = true`: Removes employees if they are removed from the list.
-
----
-
-## **3. @ManyToOne (Many-to-One Relationship)**
-This is the **inverse** of `@OneToMany`, meaning multiple entities are related to one.
-
-**Example:**
-- Multiple **Employees** belong to **one Department**.
-
-```java
-@Entity
-public class Employee {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
-}
-```
-
-**Explanation:**
-- `@ManyToOne`: Many `Employee` entities belong to one `Department`.
-- `@JoinColumn(name = "department_id")`: Foreign key in the `Employee` table.
-
----
-
-## **4. @ManyToMany (Many-to-Many Relationship)**
-When both sides have multiple relationships.
-
-**Example:**
-- A **Student** can enroll in **multiple Courses**, and a **Course** can have multiple **Students**.
-
-```java
-@Entity
-public class Student {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-
-    @ManyToMany
-    @JoinTable(
-        name = "student_course",
-        joinColumns = @JoinColumn(name = "student_id"),
-        inverseJoinColumns = @JoinColumn(name = "course_id")
-    )
-    private List<Course> courses = new ArrayList<>();
-}
-```
-
-```java
-@Entity
-public class Course {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String title;
-
-    @ManyToMany(mappedBy = "courses")
-    private List<Student> students = new ArrayList<>();
-}
-```
-
-**Explanation:**
-- `@ManyToMany`: Many students can be in many courses.
-- `@JoinTable`: Creates a **junction table (`student_course`)** to manage the relationship.
-- `joinColumns`: References `student_id`.
-- `inverseJoinColumns`: References `course_id`.
-- `mappedBy = "courses"`: Means `Student` owns the relationship.
-
----
-
-## **Cascade Types in Relationships**
-JPA allows cascading operations (`CascadeType`) to propagate changes automatically:
-- `ALL`: Applies all operations (persist, merge, remove, etc.).
-- `PERSIST`: Saves the child entity when the parent is saved.
-- `MERGE`: Merges the child when the parent is merged.
-- `REMOVE`: Deletes the child when the parent is deleted.
-- `REFRESH`: Reloads child entities when the parent is refreshed.
-- `DETACH`: Detaches the child when the parent is detached.
-
-**Example of Cascading:**
-```java
-@OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
-private List<Employee> employees;
-```
-
----
-
-## **Fetch Types**
-Defines how child entities are loaded:
-- `EAGER`: Loads related entities immediately (default for `@OneToOne` and `@ManyToOne`).
-- `LAZY`: Loads related entities only when accessed (default for `@OneToMany` and `@ManyToMany`).
-
-**Example of Lazy Loading:**
-```java
-@OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
-private List<Employee> employees;
-```
-
----
-
-### **Summary Table**
-
-| Relationship  | Annotation | Example |
-|--------------|------------|---------|
-| One-to-One   | `@OneToOne` | A User has one Address |
-| One-to-Many  | `@OneToMany` | A Department has many Employees |
-| Many-to-One  | `@ManyToOne` | Many Employees belong to one Department |
-| Many-to-Many | `@ManyToMany` | A Student can enroll in many Courses |
-
----
-
-These annotations help in defining relationships between entities efficiently in Spring Boot. Let me know if you need more details!
-
-### **📌 `@Data`, `@NestedConfigurationProperty`, and `@ConfigurationProperties` in Spring Boot**  
-
-These annotations are primarily used in **Spring Boot Configuration** to manage and bind properties effectively.
-
----
-
-## **1️⃣ `@Data` (Lombok Annotation)**
-✅ **Purpose**:  
-- **Automatically generates** boilerplate code like **getters, setters, `toString()`, `equals()`, `hashCode()`**.  
-- Reduces verbosity in Java classes.
-
-✅ **When to Use?**  
-- In **POJOs or DTOs** that require getter/setter methods.
-- In configuration classes when combined with `@ConfigurationProperties`.
-
-✅ **Example:**
-```java
-import lombok.Data;
-
-@Data  // Generates getters, setters, toString, equals, and hashCode
-public class User {
-    private String name;
-    private int age;
-}
-```
----
-## **2️⃣ `@ConfigurationProperties`**
-✅ **Purpose**:  
-- Binds **external properties** from `application.properties` or `application.yml` to a **POJO (Plain Old Java Object)**.  
-- Supports **type-safe configuration**.
-
-✅ **When to Use?**  
-- When **mapping multiple related properties** to a class.
-
-✅ **Example (`application.yml`):**
-```yaml
-app:
-  name: MyApp
-  version: 1.0
-```
-✅ **Java Class with `@ConfigurationProperties`:**
-```java
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
-import lombok.Data;
-
-@Data
-@Component
-@ConfigurationProperties(prefix = "app")
-public class AppConfig {
-    private String name;
-    private String version;
-}
-```
-📌 **Now, `AppConfig` will automatically load values from `application.yml`**.
-
----
-## **3️⃣ `@NestedConfigurationProperty`**
-✅ **Purpose**:  
-- Used **inside `@ConfigurationProperties` classes** to group related nested properties **without creating a separate prefix**.
-
-✅ **When to Use?**  
-- When you **have a nested property structure** inside a configuration class.
+Just tell me 👍
 
 ✅ **Example (`application.yml`):**
 ```yaml
@@ -548,7 +181,170 @@ app:
 @Component
 public class AppConfig {
     private String name;
-    private String version;
+    Below is a clean, realistic JUnit 5 + Mockito test case that forces the catch block of your parseFile(...) method to execute and verifies that a RemittanceParserException is thrown.
+
+I’ll show two approaches.
+👉 Approach 1 (Recommended): Force an IOException by giving an invalid file path
+👉 Approach 2: Mock an internal dependency to throw BatchProcessingException
+
+
+---
+
+✅ Assumptions (based on your code)
+
+You are using JUnit 5
+
+You are using Mockito
+
+parseFile(...) is in a service class like RemittanceFileParser
+
+remittanceFileService is fetched from Spring ApplicationContext
+
+You cannot modify the production code
+
+
+
+---
+
+✅ Imports (common)
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
+
+
+---
+
+✅ APPROACH 1 – Force IOException (Simplest & Most Reliable)
+
+This covers the catch (IOException | BatchProcessingException) block.
+
+✔ Why this works
+
+Files.lines(path, …) throws an IOException if the file does not exist.
+
+
+---
+
+🔹 Test Case
+
+@ExtendWith(MockitoExtension.class)
+class RemittanceFileParserTest {
+
+    @InjectMocks
+    private RemittanceFileParser parser; // class containing parseFile()
+
+    @Mock
+    private ApplicationContext applicationContext;
+
+    @Mock
+    private IRemittanceFileService remittanceFileService;
+
+    @Test
+    void parseFile_shouldThrowRemittanceParserException_whenIOExceptionOccurs() {
+
+        // Arrange
+        when(applicationContext.getBean("remittanceFileService"))
+                .thenReturn(remittanceFileService);
+
+        String invalidFilePath = "non/existing/path/file.txt";
+
+        // Act & Assert
+        RemittanceParserException exception =
+                assertThrows(RemittanceParserException.class, () ->
+                        parser.parseFile(applicationContext, invalidFilePath)
+                );
+
+        // Optional validation
+        assertNotNull(exception.getErrors());
+        assertFalse(exception.getErrors().isEmpty());
+    }
+}
+
+✔ This guarantees the catch block is executed
+✔ No mocking of static Files.lines() needed
+✔ Sonar + coverage tools accept this approach
+
+
+---
+
+✅ APPROACH 2 – Force BatchProcessingException (Mock Dependency)
+
+If you specifically want to trigger the second exception type:
+
+
+---
+
+🔹 Test Case
+
+@Test
+void parseFile_shouldThrowRemittanceParserException_whenBatchProcessingExceptionOccurs() {
+
+    // Arrange
+    when(applicationContext.getBean("remittanceFileService"))
+            .thenReturn(remittanceFileService);
+
+    when(remittanceFileService.getDetailId())
+            .thenThrow(new BatchProcessingException("Test exception"));
+
+    // Create a temporary valid file to avoid IOException
+    Path tempFile = Files.createTempFile("test", ".txt");
+
+    // Act & Assert
+    RemittanceParserException exception =
+            assertThrows(RemittanceParserException.class, () ->
+                    parser.parseFile(applicationContext, tempFile.toString())
+            );
+
+    assertNotNull(exception.getErrors());
+}
+
+✔ Covers BatchProcessingException path
+✔ Ensures the catch block logic is executed
+
+
+---
+
+✅ What This Test Covers
+
+✔ catch (IOException | BatchProcessingException)
+✔ Logger.error(...)
+✔ errors.add(new ParseError(...))
+✔ throw new RemittanceParserException(errors);
+
+
+---
+
+✅ Best Practice (Sonar-friendly)
+
+Use Approach 1 for basic coverage
+
+Use Approach 2 if Sonar demands explicit coverage of BatchProcessingException
+
+
+
+---
+
+If you want, I can also:
+
+Add assertions on ParseError values
+
+Mock Logger verification
+
+Write a 100% coverage test suite for this class
+
+Help suppress Sonar false positives
+
+
+Just tell me  String version;
 
     @NestedConfigurationProperty
     private DatabaseConfig database;
